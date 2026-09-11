@@ -1,0 +1,12 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    ports:
+      - "2000:3000"
+
+  judge:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/judge/Dockerfile
