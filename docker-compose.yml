@@ -1,12 +1,36 @@
-services:
+﻿services:
   api:
     build:
       context: .
       dockerfile: Dockerfile
     ports:
       - "2000:3000"
+    environment:
+      REDIS_URL: redis://redis:6379
 
   judge:
     build:
       context: .
       dockerfile: infrastructure/docker/judge/Dockerfile
+    expose:
+      - "3001"
+    environment:
+      REDIS_URL: redis://redis:6379
+
+  piston:
+    image: ghcr.io/engineer-man/piston@sha256:2f66b7456189c4d713aa986d98eccd0b6ee16d26c7ec5f21b30e942756fd127a
+    privileged: true
+    environment:
+      PISTON_LIMIT_OVERRIDES: '{"kotlin":{"compile_cpu_time":30000}}'
+    volumes:
+      - piston_data:/piston
+    ports:
+      - "2001:2000"
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+volumes:
+  piston_data:

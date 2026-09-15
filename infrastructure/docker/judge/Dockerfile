@@ -1,14 +1,13 @@
-FROM ubuntu:24.04
+FROM node:18-bookworm
 
 WORKDIR /judge
 
-RUN apt-get update && \
-    apt-get install -y \
-    python3 \
-    python3-pip \
-    nodejs \
-    npm \
-    gcc \
-    g++ \
-    openjdk-21-jdk \
-    && rm -rf /var/lib/apt/lists/*
+COPY services/judge/package*.json ./
+
+RUN npm ci
+
+COPY services/judge/dist/services/judge ./dist
+
+EXPOSE 3001
+
+CMD ["sh", "-c", "node dist/workers/server.js & node dist/queue/judge-worker.js"]

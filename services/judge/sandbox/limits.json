@@ -1,6 +1,0 @@
-{
-  "cpuLimitSeconds": 2,
-  "memoryLimitMB": 256,
-  "processLimit": 1,
-  "network": false
-}
