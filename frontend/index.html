@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DETOX Code — Proctored Timed Challenge Workspace</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body class="theme-dark">
+
+  <!-- Top Navigation & Challenge Control Header -->
+  <header class="workspace-header">
+    <div class="header-left">
+      <div class="brand-logo">
+        <span class="logo-badge">DETOX</span>
+        <span class="logo-text">Code</span>
+      </div>
+      <div class="challenge-meta">
+        <span class="challenge-title" id="challengeTitle">Community Contest #1: Two Sum</span>
+        <span class="challenge-badge status-live" id="sessionStatusBadge">PROCTORED LIVE</span>
+      </div>
+    </div>
+
+    <div class="header-center">
+      <div class="timer-container" id="timerContainer">
+        <span class="timer-icon">⏱</span>
+        <span class="timer-display" id="timerDisplay">45:00</span>
+      </div>
+    </div>
+
+    <div class="header-right">
+      <!-- Anti-Cheat Strike Indicator -->
+      <div class="strike-panel" title="Anti-Cheat Violation Strikes (Max 3)">
+        <span class="strike-label">Strikes:</span>
+        <div class="strike-dots" id="strikeDots">
+          <span class="strike-dot" id="dot1"></span>
+          <span class="strike-dot" id="dot2"></span>
+          <span class="strike-dot" id="dot3"></span>
+        </div>
+      </div>
+
+      <!-- 10-Second Idle Auto-Save Status -->
+      <div class="autosave-indicator" id="autosaveIndicator">
+        <span class="autosave-dot"></span>
+        <span class="autosave-text" id="autosaveText">Idle (Saved)</span>
+      </div>
+
+      <div class="action-buttons">
+        <button class="btn btn-secondary" id="btnRunTests">▶ Run Tests</button>
+        <button class="btn btn-primary" id="btnSubmit">Submit Solution</button>
+        <button class="btn btn-danger-outline" id="btnExit">Exit (Esc)</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Workspace Layout -->
+  <main class="workspace-body">
+    <!-- Left Pane: Problem Description -->
+    <section class="problem-pane">
+      <div class="pane-header">
+        <h1 class="problem-title" id="problemTitle">1. Two Sum</h1>
+        <div class="problem-tags">
+          <span class="tag tag-difficulty-easy" id="problemDifficulty">Easy</span>
+          <span class="tag tag-points" id="problemPoints">100 Pts</span>
+          <span class="tag tag-time">Time: 2000ms</span>
+          <span class="tag tag-mem">Mem: 256MB</span>
+        </div>
+      </div>
+
+      <div class="problem-content" id="problemContent">
+        <p>Given an array of integers <code>nums</code> and an integer <code>target</code>, return indices of the two numbers such that they add up to <code>target</code>.</p>
+        <p>You may assume that each input would have <strong>exactly one solution</strong>, and you may not use the same element twice.</p>
+        
+        <h3>Example 1</h3>
+        <div class="code-example">
+          <div class="example-row"><strong>Input:</strong> nums = [2,7,11,15], target = 9</div>
+          <div class="example-row"><strong>Output:</strong> [0,1]</div>
+          <div class="example-row"><strong>Explanation:</strong> Because nums[0] + nums[1] == 9, we return [0, 1].</div>
+        </div>
+
+        <h3>Example 2</h3>
+        <div class="code-example">
+          <div class="example-row"><strong>Input:</strong> nums = [3,2,4], target = 6</div>
+          <div class="example-row"><strong>Output:</strong> [1,2]</div>
+        </div>
+
+        <h3>Constraints</h3>
+        <ul class="constraints-list">
+          <li><code>2 &le; nums.length &le; 10<sup>4</sup></code></li>
+          <li><code>-10<sup>9</sup> &le; nums[i] &le; 10<sup>9</sup></code></li>
+          <li><code>-10<sup>9</sup> &le; target &le; 10<sup>9</sup></code></li>
+          <li>Only one valid answer exists.</li>
+        </ul>
+
+        <div class="anti-cheat-notice">
+          <h4>🔒 Proctored Integrity Active</h4>
+          <p>This workspace enforces fullscreen locking, focus-loss tracking, and smart clipboard validation. Copying code from external applications will be blocked and recorded as a violation strike.</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Pane: Code Editor & Execution Console -->
+    <section class="editor-pane">
+      <!-- Editor Toolbar -->
+      <div class="editor-toolbar">
+        <div class="toolbar-left">
+          <label for="languageSelect">Language:</label>
+          <select id="languageSelect" class="select-input">
+            <option value="python" selected>Python 3.10</option>
+            <option value="cpp">C++ (GCC 10.2)</option>
+            <option value="java">Java 15</option>
+            <option value="javascript">JavaScript (Node 18)</option>
+            <option value="typescript">TypeScript 5.0</option>
+            <option value="rust">Rust 1.68</option>
+            <option value="go">Go 1.16</option>
+          </select>
+        </div>
+        <div class="toolbar-right">
+          <span class="editor-status" id="editorStatus">Line 1, Col 1</span>
+          <button class="btn-text" id="btnFullscreenToggle" title="Toggle Fullscreen">⛶ Fullscreen</button>
+        </div>
+      </div>
+
+      <!-- Editor Container with Custom Textarea Engine -->
+      <div class="editor-wrapper">
+        <div class="editor-gutters" id="editorGutters">1</div>
+        <textarea id="codeEditor" class="code-textarea" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
+      </div>
+
+      <!-- Bottom Interactive Test Console -->
+      <div class="console-pane">
+        <div class="console-header">
+          <span class="console-tab active">Test Cases</span>
+          <span class="console-tab">Execution Output</span>
+          <span class="console-tab" id="snapshotVersionTab">Snapshots (0)</span>
+        </div>
+        <div class="console-body" id="consoleBody">
+          <div class="testcase-view">
+            <div class="testcase-selector">
+              <button class="tc-btn active">Case 1</button>
+              <button class="tc-btn">Case 2</button>
+            </div>
+            <div class="testcase-data">
+              <div class="field-label">Sample Input:</div>
+              <pre class="field-pre">4&#10;2 7 11 15&#10;9</pre>
+              <div class="field-label">Expected Output:</div>
+              <pre class="field-pre">0 1</pre>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- ================= MODALS & POPUPS ================= -->
+
+  <!-- 1. Entry Access Modal: Grants Fullscreen & Screen Proctored Access -->
+  <div class="modal-overlay active" id="entryModal">
+    <div class="modal-card">
+      <div class="modal-icon-shield">🛡️</div>
+      <h2 class="modal-title">Proctored Contest Entry</h2>
+      <p class="modal-description">
+        You are about to enter a <strong>monitored competitive challenge</strong>. To ensure competitive integrity, this workspace requires:
+      </p>
+      <ul class="modal-rules">
+        <li><strong>Full Screen Lock:</strong> The challenge will expand to full screen. Exiting will trigger warning strikes.</li>
+        <li><strong>Focus Monitoring:</strong> Switching tabs or opening applications on other monitors will be logged.</li>
+        <li><strong>Smart Clipboard:</strong> Pasting external code is prohibited. Only code copied within this workspace is allowed.</li>
+        <li><strong>Auto-Save:</strong> Code is automatically saved locally every 10 seconds of idle pause.</li>
+      </ul>
+      <div class="modal-actions">
+        <button class="btn btn-primary btn-large" id="btnGrantAccess">I Agree & Enter Fullscreen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Escape Key / Exit Warning Modal -->
+  <div class="modal-overlay" id="exitModal">
+    <div class="modal-card modal-card-warning">
+      <div class="modal-icon-warning">⚠️</div>
+      <h2 class="modal-title">Exit Challenge Confirmation</h2>
+      <p class="modal-description">
+        You pressed <strong>Escape</strong> or requested to exit fullscreen. If you leave, your active session will be closed on the server.
+      </p>
+      <div class="modal-actions-stacked">
+        <button class="btn btn-primary" id="btnConfirmSubmitAndExit">Submit Current Code & Exit</button>
+        <button class="btn btn-danger" id="btnConfirmAbandon">Abandon Challenge & Forfeit</button>
+        <button class="btn btn-secondary" id="btnCancelExit">Cancel & Resume Fullscreen</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Strike Warning Modal (Focus Lost / Window Blur) -->
+  <div class="modal-overlay" id="strikeModal">
+    <div class="modal-card modal-card-danger">
+      <div class="modal-icon-danger">🚨</div>
+      <h2 class="modal-title" id="strikeModalTitle">ANTI-CHEAT VIOLATION: FOCUS LOST</h2>
+      <p class="modal-description" id="strikeModalDesc">
+        You switched tabs or clicked outside the active challenge window. A strike has been recorded against your account.
+      </p>
+      <div class="strike-meter" id="strikeMeterText">Warning Strike 1 of 3</div>
+      <div class="modal-actions">
+        <button class="btn btn-primary btn-large" id="btnAcknowledgeStrike">Return to Fullscreen Workspace</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Session Terminated Modal -->
+  <div class="modal-overlay" id="terminatedModal">
+    <div class="modal-card modal-card-fatal">
+      <div class="modal-icon-fatal">⛔</div>
+      <h2 class="modal-title">Contest Session Terminated</h2>
+      <p class="modal-description" id="terminatedModalDesc">
+        Your challenge attempt has been terminated because you exceeded the maximum allowed integrity strikes (3/3).
+      </p>
+      <div class="terminated-details" id="terminatedDetails"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary btn-large" onclick="window.location.reload()">Reload Platform</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/anticheat.js"></script>
+</body>
+</html>
