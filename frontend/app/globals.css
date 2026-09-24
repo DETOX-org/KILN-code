@@ -1,0 +1,335 @@
+/* =========================================================================
+   KILN-Code & DETOX Next-Gen Competitive Platform Design Tokens & Styles
+   ========================================================================= */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,400;0,500;0,600;0,700;1,400&family=IBM+Plex+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&display=swap');
+
+:root {
+  /* Dark Mode Surfaces (Default Developer Theme) */
+  --bg-deep: #080C14;
+  --bg-canvas: #0D131F;
+  --bg-surface: #131B2A;
+  --bg-card: #182234;
+  --bg-card-hover: #1F2C42;
+  --bg-elevated: #24344E;
+  --bg-glass: rgba(19, 27, 42, 0.75);
+
+  /* Lines & Borders */
+  --line-subtle: rgba(255, 255, 255, 0.07);
+  --line-strong: rgba(255, 255, 255, 0.14);
+  --line-active: #6366F1;
+  --border-focus: rgba(99, 102, 241, 0.5);
+
+  /* High-Contrast Inks / Typography */
+  --ink-primary: #F8FAFC;
+  --ink-secondary: #CBD5E1;
+  --ink-muted: #8492A6;
+  --ink-faint: #475569;
+
+  /* Status Tokens (WCAG 2.1 AA Compliant >= 4.5:1) */
+  --status-accepted: #10B981;
+  --status-accepted-bg: rgba(16, 185, 129, 0.12);
+  --status-accepted-border: rgba(16, 185, 129, 0.28);
+  --status-accepted-glow: rgba(16, 185, 129, 0.4);
+
+  --status-wrong: #F43F5E;
+  --status-wrong-bg: rgba(244, 63, 94, 0.12);
+  --status-wrong-border: rgba(244, 63, 94, 0.28);
+  --status-wrong-glow: rgba(244, 63, 94, 0.4);
+
+  --status-pending: #F59E0B;
+  --status-pending-bg: rgba(245, 158, 11, 0.12);
+  --status-pending-border: rgba(245, 158, 11, 0.28);
+  --status-pending-glow: rgba(245, 158, 11, 0.4);
+
+  --status-tle: #FB923C;
+  --status-tle-bg: rgba(251, 146, 60, 0.12);
+
+  --status-mle: #C084FC;
+  --status-mle-bg: rgba(192, 132, 252, 0.12);
+
+  --status-ai: #818CF8;
+  --status-ai-bg: rgba(129, 140, 248, 0.12);
+
+  --status-cyan: #38BDF8;
+  --status-cyan-bg: rgba(56, 189, 248, 0.12);
+
+  /* Fonts */
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, Menlo, monospace;
+
+  /* Radii */
+  --r-sm: 6px;
+  --r-md: 10px;
+  --r-lg: 14px;
+  --r-xl: 20px;
+  --r-pill: 9999px;
+
+  /* Shadows & Glows */
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.3);
+  --shadow-md: 0 4px 16px -2px rgba(0, 0, 0, 0.45);
+  --shadow-lg: 0 12px 32px -4px rgba(0, 0, 0, 0.6);
+  --glow-indigo: 0 0 24px -4px rgba(99, 102, 241, 0.35);
+  --glow-emerald: 0 0 20px -4px rgba(16, 185, 129, 0.35);
+}
+
+/* Light Theme Overrides (if activated) */
+[data-theme='light'] {
+  --bg-deep: #F1F4F9;
+  --bg-canvas: #F8FAFC;
+  --bg-surface: #FFFFFF;
+  --bg-card: #FFFFFF;
+  --bg-card-hover: #F8FAFC;
+  --bg-elevated: #EEF2F6;
+  --bg-glass: rgba(255, 255, 255, 0.85);
+
+  --line-subtle: #E2E8F0;
+  --line-strong: #CBD5E1;
+
+  --ink-primary: #0F172A;
+  --ink-secondary: #334155;
+  --ink-muted: #64748B;
+  --ink-faint: #94A3B8;
+
+  --status-accepted-bg: #ECFDF5;
+  --status-wrong-bg: #FFF1F2;
+  --status-pending-bg: #FFFBEB;
+  --status-ai-bg: #EEF2FF;
+  --status-cyan-bg: #F0F9FF;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--bg-deep);
+  color: var(--ink-primary);
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  min-height: 100vh;
+  overflow-x: hidden;
+  background-image: 
+    radial-gradient(ellipse at 15% 10%, rgba(99, 102, 241, 0.08) 0%, transparent 45%),
+    radial-gradient(ellipse at 85% 25%, rgba(14, 165, 233, 0.06) 0%, transparent 40%),
+    radial-gradient(ellipse at 50% 90%, rgba(16, 185, 129, 0.05) 0%, transparent 50%);
+  background-attachment: fixed;
+}
+
+code, pre, .mono {
+  font-family: var(--font-mono);
+}
+
+button {
+  cursor: pointer;
+  border: none;
+  background: none;
+  font-family: inherit;
+  color: inherit;
+  transition: all 0.18s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  color: inherit;
+  background: var(--bg-surface);
+  border: 1px solid var(--line-strong);
+  border-radius: var(--r-sm);
+  padding: 8px 12px;
+  outline: none;
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+input:focus, select:focus, textarea:focus {
+  border-color: var(--line-active);
+  box-shadow: 0 0 0 3px var(--border-focus);
+}
+
+/* Common Layout Components */
+.container {
+  max-width: 1360px;
+  margin: 0 auto;
+  padding: 0 24px;
+}
+
+/* Glassmorphism Cards */
+.card {
+  background: var(--bg-card);
+  border: 1px solid var(--line-subtle);
+  border-radius: var(--r-lg);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
+  backdrop-filter: blur(12px);
+}
+
+.card:hover {
+  border-color: var(--line-strong);
+  box-shadow: var(--shadow-md);
+}
+
+.card-interactive:hover {
+  transform: translateY(-2px);
+  border-color: var(--line-strong);
+}
+
+/* Badges */
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-family: var(--font-mono);
+  font-size: 11.5px;
+  font-weight: 500;
+  padding: 3px 9px;
+  border-radius: var(--r-pill);
+  line-height: 1.4;
+}
+
+.badge-accepted {
+  background: var(--status-accepted-bg);
+  color: var(--status-accepted);
+  border: 1px solid var(--status-accepted-border);
+}
+
+.badge-wrong {
+  background: var(--status-wrong-bg);
+  color: var(--status-wrong);
+  border: 1px solid var(--status-wrong-border);
+}
+
+.badge-pending {
+  background: var(--status-pending-bg);
+  color: var(--status-pending);
+  border: 1px solid var(--status-pending-border);
+}
+
+.badge-ai {
+  background: var(--status-ai-bg);
+  color: var(--status-ai);
+  border: 1px solid rgba(129, 140, 248, 0.3);
+}
+
+.badge-cyan {
+  background: var(--status-cyan-bg);
+  color: var(--status-cyan);
+  border: 1px solid rgba(56, 189, 248, 0.3);
+}
+
+/* Buttons */
+.btn-primary {
+  background: linear-gradient(135deg, #6366F1 0%, #4F46E5 100%);
+  color: #FFFFFF;
+  padding: 9px 18px;
+  border-radius: var(--r-md);
+  font-weight: 600;
+  font-size: 13.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 10px rgba(99, 102, 241, 0.35);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #4F46E5 0%, #4338CA 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.5);
+}
+
+.btn-success {
+  background: linear-gradient(135deg, #10B981 0%, #059669 100%);
+  color: #FFFFFF;
+  padding: 9px 18px;
+  border-radius: var(--r-md);
+  font-weight: 600;
+  font-size: 13.5px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 2px 10px rgba(16, 185, 129, 0.35);
+}
+
+.btn-success:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.5);
+}
+
+.btn-secondary {
+  background: var(--bg-surface);
+  color: var(--ink-secondary);
+  border: 1px solid var(--line-strong);
+  padding: 8px 16px;
+  border-radius: var(--r-md);
+  font-weight: 500;
+  font-size: 13px;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: var(--bg-card-hover);
+  color: var(--ink-primary);
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes pulseGlow {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.6; transform: scale(1.05); }
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+@keyframes floatAnim {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.25s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+.animate-pulse-glow {
+  animation: pulseGlow 2s infinite ease-in-out;
+}
+
+.animate-float {
+  animation: floatAnim 3s infinite ease-in-out;
+}
+
+.skeleton-loading {
+  background: linear-gradient(90deg, rgba(255, 255, 255, 0.04) 25%, rgba(255, 255, 255, 0.1) 50%, rgba(255, 255, 255, 0.04) 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+/* Custom Scrollbars */
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-deep);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--line-strong);
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--ink-muted);
+}
