@@ -202,7 +202,7 @@ export default function PlagiarismReviewView() {
           alignItems: 'center',
           gap: '8px'
         }}>
-          <ShieldAlert size={16} color="#F59E0B" flexShrink={0} />
+          <ShieldAlert size={16} color="#F59E0B" style={{ flexShrink: 0 }} />
           <span><strong>Investigative Signal:</strong> {current.reason}. Per spec policy, plagiarism metrics are an investigative guide; human review is required.</span>
         </div>
       </div>
