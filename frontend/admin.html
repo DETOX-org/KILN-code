@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DETOX Code — Admin Command Portal & Challenge Configurator</title>
+  
+  <!-- High-impact Industrial & Technical Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="css/style.css">
+  <style>
+    /* Admin Portal Specific Tactical Layout */
+    .admin-container {
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 30px 24px;
+      overflow-y: auto;
+      height: calc(100vh - 54px);
+    }
+
+    .admin-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-top: 24px;
+    }
+
+    @media (max-width: 1024px) {
+      .admin-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .admin-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      padding: 24px;
+      position: relative;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    }
+
+    .admin-card:hover {
+      border-color: var(--border-strong);
+    }
+
+    .form-group {
+      margin-bottom: 18px;
+    }
+
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-row-3 {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 16px;
+    }
+
+    .form-textarea {
+      width: 100%;
+      height: 120px;
+      background: var(--bg-deep);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-main);
+      font-family: var(--font-code);
+      font-size: 0.85rem;
+      padding: 10px 12px;
+      resize: vertical;
+    }
+
+    .form-textarea:focus, .input-sharp:focus {
+      outline: none;
+      border-color: var(--orange-flame);
+      box-shadow: 0 0 10px var(--orange-glow);
+    }
+
+    .test-case-row {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-subtle);
+      padding: 12px;
+      margin-bottom: 10px;
+    }
+
+    .test-case-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      font-family: var(--font-display);
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    .session-badge-generated {
+      background: rgba(255, 77, 0, 0.15);
+      border: 2px solid var(--orange-flame);
+      padding: 20px;
+      margin-top: 20px;
+      display: none;
+    }
+
+    .session-id-display {
+      font-family: var(--font-display);
+      font-size: 2.2rem;
+      font-weight: 700;
+      color: #fff;
+      letter-spacing: 2px;
+      margin: 8px 0;
+    }
+
+    .admin-table-container {
+      margin-top: 16px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .switch-label {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      cursor: pointer;
+      font-size: 0.85rem;
+      color: var(--text-main);
+      user-select: none;
+    }
+
+    .switch-label input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: var(--orange-flame);
+      cursor: pointer;
+    }
+
+    .audit-modal-body {
+      max-height: 480px;
+      overflow-y: auto;
+      margin-top: 16px;
+      font-family: var(--font-code);
+      font-size: 0.8rem;
+    }
+
+    .audit-card {
+      background: var(--bg-deep);
+      border: 1px solid var(--border-subtle);
+      padding: 14px;
+      margin-bottom: 12px;
+    }
+
+    .audit-card.disqualified {
+      border-left: 3px solid var(--red-fatal);
+    }
+
+    .audit-card.accepted {
+      border-left: 3px solid var(--green-pass);
+    }
+  </style>
+</head>
+<body class="theme-arena">
+
+  <!-- ========================================================================= -->
+  <!-- TOP GLOBAL HUD NAVIGATION                                                 -->
+  <!-- ========================================================================= -->
+  <header class="hud-header">
+    <div class="hud-left">
+      <a href="index.html" class="hud-brand" style="text-decoration: none;">
+        <span class="hud-brand-tag">DETOX</span>
+        <span class="hud-brand-title">ADMIN COMMAND // KILN-V1.0</span>
+      </a>
+      <div class="hud-telemetry-badge">
+        <span class="status-pip"></span>
+        <span class="telemetry-text">DATABASE: SINGLE-WRITE PERSISTENCE ACTIVE</span>
+      </div>
+    </div>
+
+    <div class="hud-right">
+      <div class="hud-lobby-links">
+        <a href="index.html" class="btn btn-sharp btn-secondary" style="text-decoration: none; padding: 6px 14px; font-size: 0.75rem;">
+          ◀ RETURN TO ARENA
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- MAIN ADMIN MISSION CONTROL                                                -->
+  <!-- ========================================================================= -->
+  <main class="admin-container">
+    
+    <!-- Top Header Banner -->
+    <div class="tactical-subhead">
+      <span class="bracket-accent">[</span>
+      <span class="subhead-text">SESSION CONFIGURATION &amp; ATOMIC CLOUD DEPLOYMENT</span>
+      <span class="bracket-accent">]</span>
+    </div>
+
+    <h1 class="arena-title" style="font-size: 2.2rem; margin-top: 4px;">
+      CHALLENGE SESSION <span class="title-accent">ORCHESTRATOR</span>
+    </h1>
+    <p class="arena-description" style="max-width: 900px; margin-bottom: 24px;">
+      Configure custom DSA problem parameters, operational constraints, anti-cheat surveillance rules, and compile them into a single metadata document. Generating a session produces a unique <strong>KILN-XXXX Session ID</strong> and performs a single atomic write to the database (Firebase + Local Persistent Engine).
+    </p>
+
+    <!-- Two-Column Grid: Left (Builder Form), Right (Active Sessions & Live Audit) -->
+    <div class="admin-grid">
+
+      <!-- COLUMN 1: Challenge & Session Builder Form -->
+      <section class="admin-card">
+        <span class="corner-bracket top-left"></span>
+        <span class="corner-bracket top-right"></span>
+        <span class="corner-bracket bottom-left"></span>
+        <span class="corner-bracket bottom-right"></span>
+
+        <div class="featured-tag">SESSION CONFIGURATOR</div>
+        <h2 class="featured-title" style="font-size: 1.4rem; margin-bottom: 16px;">NEW CHALLENGE SPECIFICATION</h2>
+
+        <form id="createSessionForm">
+          <!-- Session Name & Duration -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="input-label" for="sessionTitle">CHALLENGE SESSION TITLE</label>
+              <input type="text" id="sessionTitle" class="input-sharp" placeholder="e.g. KILN TRIAL // ARRAY CONFLICT" required>
+            </div>
+            <div class="form-group">
+              <label class="input-label" for="sessionDuration">MATCH DURATION (MINUTES)</label>
+              <input type="number" id="sessionDuration" class="input-sharp" value="45" min="5" max="180" required>
+            </div>
+          </div>
+
+          <!-- Problem Title & Difficulty -->
+          <div class="form-row-3">
+            <div class="form-group" style="grid-column: span 2;">
+              <label class="input-label" for="probTitle">PROBLEM TITLE</label>
+              <input type="text" id="probTitle" class="input-sharp" placeholder="e.g. Two Sum" required>
+            </div>
+            <div class="form-group">
+              <label class="input-label" for="probDifficultySelect">DIFFICULTY</label>
+              <select id="probDifficultySelect" class="sharp-select" style="width: 100%; height: 38px;">
+                <option value="easy" selected>EASY</option>
+                <option value="medium">MEDIUM</option>
+                <option value="hard">HARD</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- CPU & Memory Limits -->
+          <div class="form-row">
+            <div class="form-group">
+              <label class="input-label" for="probTimeLimit">CPU TIME LIMIT (MS)</label>
+              <input type="number" id="probTimeLimit" class="input-sharp" value="2000" min="200" max="10000" required>
+            </div>
+            <div class="form-group">
+              <label class="input-label" for="probMemoryLimit">RAM BOUNDARY (MB)</label>
+              <input type="number" id="probMemoryLimit" class="input-sharp" value="256" min="64" max="1024" required>
+            </div>
+          </div>
+
+          <!-- Problem Statement Markdown -->
+          <div class="form-group">
+            <label class="input-label" for="probStatement">PROBLEM STATEMENT (MARKDOWN FORMAT)</label>
+            <textarea id="probStatement" class="form-textarea" placeholder="Describe problem objectives, constraints, inputs, and expected formats..." required></textarea>
+          </div>
+
+          <!-- Test Cases Section -->
+          <div class="form-group">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+              <label class="input-label" style="margin: 0;">EVALUATION TEST CASES (PUBLIC &amp; HIDDEN)</label>
+              <button type="button" class="btn btn-sharp btn-secondary" id="btnAddTestCase" style="padding: 4px 10px; font-size: 0.72rem;">+ ADD TEST CASE</button>
+            </div>
+            
+            <div id="testCasesContainer">
+              <!-- Default Test Case 1 -->
+              <div class="test-case-row">
+                <div class="test-case-header">
+                  <span>TEST CASE 01 (PUBLIC SAMPLE)</span>
+                  <label><input type="checkbox" class="tc-is-sample" checked> IS SAMPLE</label>
+                </div>
+                <div class="form-row">
+                  <div>
+                    <span class="tc-io-label">INPUT (STDIN):</span>
+                    <textarea class="form-textarea tc-input" style="height: 60px;">4&#10;2 7 11 15&#10;9</textarea>
+                  </div>
+                  <div>
+                    <span class="tc-io-label">EXPECTED OUTPUT (STDOUT):</span>
+                    <textarea class="form-textarea tc-output" style="height: 60px;">0 1</textarea>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Default Test Case 2 -->
+              <div class="test-case-row">
+                <div class="test-case-header">
+                  <span>TEST CASE 02 (PUBLIC SAMPLE)</span>
+                  <label><input type="checkbox" class="tc-is-sample" checked> IS SAMPLE</label>
+                </div>
+                <div class="form-row">
+                  <div>
+                    <span class="tc-io-label">INPUT (STDIN):</span>
+                    <textarea class="form-textarea tc-input" style="height: 60px;">3&#10;3 2 4&#10;6</textarea>
+                  </div>
+                  <div>
+                    <span class="tc-io-label">EXPECTED OUTPUT (STDOUT):</span>
+                    <textarea class="form-textarea tc-output" style="height: 60px;">1 2</textarea>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Anti-Cheat Rules Switches -->
+          <div class="form-group" style="background: var(--bg-deep); padding: 14px; border: 1px solid var(--border-subtle);">
+            <div class="input-label" style="margin-bottom: 12px;">PROCTORED INTEGRITY &amp; ANTI-CHEAT RULES</div>
+            <div class="form-row" style="margin-bottom: 10px;">
+              <label class="switch-label">
+                <input type="checkbox" id="ruleFullscreen" checked>
+                <span>Enforce Fullscreen Lock</span>
+              </label>
+              <label class="switch-label">
+                <input type="checkbox" id="ruleBlockPaste" checked>
+                <span>Purge External Copy-Pastes</span>
+              </label>
+            </div>
+            <div class="form-row">
+              <label class="switch-label">
+                <input type="checkbox" id="ruleAutoSave" checked>
+                <span>10s Idle Debounce Autosave</span>
+              </label>
+              <div style="display: flex; align-items: center; gap: 8px;">
+                <span style="font-size: 0.8rem; color: var(--text-muted);">Max Strikes:</span>
+                <input type="number" id="ruleMaxStrikes" class="input-sharp" value="3" min="1" max="10" style="width: 70px; height: 32px;">
+              </div>
+            </div>
+          </div>
+
+          <!-- Submit Action Button -->
+          <button type="submit" class="btn btn-sharp btn-primary btn-large" id="btnPublishSession" style="width: 100%;">
+            ⚡ GENERATE SESSION ID &amp; PUBLISH (SINGLE WRITE)
+          </button>
+        </form>
+
+        <!-- Generated Session Banner (Visible after publish) -->
+        <div class="session-badge-generated" id="sessionGeneratedBadge">
+          <div class="featured-tag">SESSION READY // SHARE WITH PARTICIPANTS</div>
+          <div class="session-id-display" id="generatedSessionId">KILN-0000</div>
+          <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 12px;">
+            Participants can enter this code in the Arena Lobby to instantly load this specific challenge and operational rules.
+          </p>
+          <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+            <button class="btn btn-sharp btn-secondary" id="btnCopySessionCode">📋 COPY CODE</button>
+            <button class="btn btn-sharp btn-primary" id="btnCopyDirectLink">🔗 COPY DIRECT INVITE LINK</button>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- COLUMN 2: Active Sessions & Real-Time Audit Monitor -->
+      <section class="admin-card">
+        <span class="corner-bracket top-left"></span>
+        <span class="corner-bracket top-right"></span>
+        <span class="corner-bracket bottom-left"></span>
+        <span class="corner-bracket bottom-right"></span>
+
+        <div class="featured-tag">SESSION MONITOR</div>
+        <h2 class="featured-title" style="font-size: 1.4rem; margin-bottom: 8px;">ACTIVE ARENA SESSIONS</h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted); margin-bottom: 16px;">
+          Inspect challenge sessions stored in the persistent database. Click any session to review participant submissions and anti-cheat audit trails.
+        </p>
+
+        <!-- Sessions List Table -->
+        <div class="admin-table-container">
+          <table class="sharp-table">
+            <thead>
+              <tr>
+                <th>SESSION ID</th>
+                <th>CHALLENGE</th>
+                <th>CODERS</th>
+                <th>STATUS</th>
+                <th>ACTION</th>
+              </tr>
+            </thead>
+            <tbody id="adminSessionsTableBody">
+              <tr><td colspan="5" style="text-align: center; color: var(--text-dim);">LOADING SESSIONS...</td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <!-- Optional Firebase Config Panel -->
+        <div style="margin-top: 24px; padding: 16px; background: var(--bg-deep); border: 1px solid var(--border-subtle);">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+            <span class="input-label" style="margin: 0;">🔥 FIREBASE CLUSTER CONNECTOR (OPTIONAL)</span>
+            <span id="firebaseStatusTag" class="sharp-tag tag-spec">MODE: LOCAL PERSISTENCE</span>
+          </div>
+          <p style="font-size: 0.78rem; color: var(--text-dim); margin-bottom: 10px;">
+            DETOX Code uses high-speed persistent storage out of the box. You can optionally connect a Firebase project to mirror atomic single writes to Firestore collections (<code>challenges</code> and <code>submissions</code>).
+          </p>
+          <div class="form-row">
+            <input type="text" id="fbProjectId" class="input-sharp" placeholder="Firebase Project ID (e.g. detox-code-prod)">
+            <input type="password" id="fbApiKey" class="input-sharp" placeholder="Firebase Web API Key">
+          </div>
+          <button type="button" class="btn btn-sharp btn-secondary" id="btnSaveFirebaseConfig" style="margin-top: 10px; padding: 6px 14px; font-size: 0.75rem;">
+            CONNECT FIREBASE CLUSTER
+          </button>
+        </div>
+
+      </section>
+
+    </div>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: SESSION AUDIT DOSSIER INSPECTOR                                    -->
+  <!-- ========================================================================= -->
+  <div class="tactical-modal-overlay" id="auditModal">
+    <div class="tactical-modal-card modal-large">
+      <span class="corner-bracket top-left"></span>
+      <span class="corner-bracket top-right"></span>
+      <span class="corner-bracket bottom-left"></span>
+      <span class="corner-bracket bottom-right"></span>
+
+      <div class="modal-badge-info">INTEGRITY AUDIT MANIFEST</div>
+      <h2 class="modal-heading" id="auditModalTitle">SESSION AUDIT: KILN-1001</h2>
+
+      <div class="audit-modal-body" id="auditModalContent">
+        <!-- Rendered submissions and telemetry timelines -->
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-sharp btn-secondary" id="btnCloseAuditModal">CLOSE AUDIT DOSSIER</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/admin.js"></script>
+</body>
+</html>

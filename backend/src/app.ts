@@ -7,6 +7,7 @@ import submissionRouter from "./routes/submission.routes.js";
 import adminRouter from "./routes/admin.routes.js";
 import contestRouter from "./routes/contest.routes.js";
 import telemetryRouter from "./routes/telemetry.routes.js";
+import sessionRouter from "./routes/session.routes.js";
 
 const app = express();
 
@@ -34,6 +35,7 @@ app.use("/api/problems", problemRouter);
 app.use("/api/submissions", submissionRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/contests", contestRouter);
+app.use("/api/sessions", sessionRouter);
 
 // Mount Static Frontend
 const possibleFrontendDirs = [

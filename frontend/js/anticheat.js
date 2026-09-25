@@ -9,7 +9,20 @@ const CHALLENGE_ID = "c0000000-0000-0000-0000-000000000014";
 let currentProblemSlug = "two-sum";
 let USER_ID = `CODER_${Math.floor(1000 + Math.random() * 9000)}`;
 
-// State
+// Dynamic Session & Local Accumulator State
+let activeSessionId = "KILN-1001";
+let activeSessionData = null;
+let localTelemetryEvents = [];
+let localSnapshots = [];
+let sessionRules = {
+  fullscreenEnforced: true,
+  blockPaste: true,
+  idleAutoSaveSeconds: 10,
+  maxStrikes: 3
+};
+let isFinalWriteDispatched = false;
+
+// Arena Match State
 let isContestActive = false;
 let strikes = 0;
 const MAX_STRIKES = 3;
@@ -589,12 +602,11 @@ function handleEditorTyping() {
 
 async function executeIdleSnapshot() {
   const code = codeEditor.value;
-  const language = languageSelect.value;
   const nowIso = new Date().toISOString();
 
   // 1. Local Cache in LocalStorage
-  const cacheKey = `kiln_snapshot_${CHALLENGE_ID}_${currentProblemSlug}`;
-  const historyKey = `kiln_versions_${CHALLENGE_ID}_${currentProblemSlug}`;
+  const cacheKey = `kiln_snapshot_${activeSessionId}_${currentProblemSlug}`;
+  const historyKey = `kiln_versions_${activeSessionId}_${currentProblemSlug}`;
 
   try {
     localStorage.setItem(cacheKey, code);
@@ -602,28 +614,15 @@ async function executeIdleSnapshot() {
     versions.push({ timestamp: nowIso, length: code.length });
     localStorage.setItem(historyKey, JSON.stringify(versions.slice(-20)));
 
-    document.getElementById("tabSnapshots").innerText = `10S SNAPSHOTS (${versions.length})`;
-    renderSnapshotsList(versions);
-  } catch (err) {}
+    localSnapshots.push({ timestamp: nowIso, length: code.length });
 
-  // 2. Sync to Backend Telemetry API
-  try {
-    const res = await fetch(`${API_BASE}/challenges/${CHALLENGE_ID}/autosave`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: USER_ID,
-        problemId: currentProblemSlug,
-        code,
-        language
-      })
-    });
-    const data = await res.json();
-    if (data.success) {
-      autosaveLed.classList.remove("saving");
-      autosaveStatus.innerText = "IDLE (SAVED)";
-      showToast("💾 10-second idle snapshot synced to server", "info");
-    }
+    const tabEl = document.getElementById("tabSnapshots");
+    if (tabEl) tabEl.innerText = `10S SNAPSHOTS (${versions.length})`;
+    renderSnapshotsList(versions);
+
+    autosaveLed.classList.remove("saving");
+    autosaveStatus.innerText = "IDLE (LOCAL SAVED)";
+    showToast("💾 10-second idle snapshot recorded locally", "info");
   } catch (err) {
     autosaveLed.classList.remove("saving");
     autosaveStatus.innerText = "SAVED (LOCAL)";
@@ -687,47 +686,63 @@ codeEditor.addEventListener("paste", (e) => {
   }
 });
 
-/* ================== TELEMETRY & 3-STRIKE PROTOCOL ================== */
-async function logTelemetryEvent(eventType, details = {}) {
+/* ================== LOCAL TELEMETRY BUFFER & 3-STRIKE PROTOCOL ================== */
+function logTelemetryEvent(eventType, details = {}) {
   if (!isContestActive) return;
 
-  try {
-    const res = await fetch(`${API_BASE}/challenges/${CHALLENGE_ID}/telemetry`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        userId: USER_ID,
-        eventType,
-        details: { ...details, clientTime: new Date().toISOString() }
-      })
-    });
+  const eventRecord = {
+    eventType,
+    details: { ...details, clientTime: new Date().toISOString() },
+    timestamp: new Date().toISOString()
+  };
 
-    const data = await res.json();
-    if (data.success) {
-      applyStrikes(data.data.strikes, data.data.sessionStatus, data.data.terminationReason);
-    }
-  } catch (err) {
-    console.error("Telemetry request error:", err);
+  localTelemetryEvents.push(eventRecord);
+  try {
+    localStorage.setItem(`kiln_telemetry_${activeSessionId}_${USER_ID}`, JSON.stringify(localTelemetryEvents));
+  } catch (err) {}
+
+  // Determine if this event constitutes a proctored violation strike
+  const strikeTriggeringEvents = [
+    "WINDOW_BLUR",
+    "TAB_SWITCH",
+    "DEVTOOLS_OPEN_ATTEMPT",
+    "EXTERNAL_PASTE_BLOCKED",
+    "FULLSCREEN_EXIT"
+  ];
+
+  if (strikeTriggeringEvents.includes(eventType)) {
+    // Respect session proctoring toggles
+    if (eventType === "FULLSCREEN_EXIT" && !sessionRules.fullscreenEnforced) return;
+    if (eventType === "EXTERNAL_PASTE_BLOCKED" && !sessionRules.blockPaste) return;
+
+    strikes++;
+    const maxAllowed = sessionRules.maxStrikes || 3;
+    applyStrikes(strikes, maxAllowed);
   }
 }
 
-function applyStrikes(currentStrikes, sessionStatus, reason) {
+function applyStrikes(currentStrikes, maxAllowed = 3) {
   strikes = currentStrikes;
 
   strikePips.forEach((pip, idx) => {
-    if (idx < strikes) {
-      pip.classList.add("active");
-    } else {
-      pip.classList.remove("active");
+    if (pip) {
+      if (idx < strikes) {
+        pip.classList.add("active");
+      } else {
+        pip.classList.remove("active");
+      }
     }
   });
 
-  if (sessionStatus === "STRIKE_WARNING") {
-    strikeAlertMeter.innerText = `WARNING STRIKE ${strikes} OF ${MAX_STRIKES}`;
+  if (strikes < maxAllowed) {
+    strikeAlertMeter.innerText = `WARNING STRIKE ${strikes} OF ${maxAllowed}`;
     strikeModal.classList.add("active");
-    showToast(`⚠️ STRIKE REGISTERED (${strikes}/${MAX_STRIKES})`, "danger");
-  } else if (sessionStatus === "TERMINATED") {
-    triggerTermination(reason || "Maximum allowed anti-cheat strikes exceeded (3/3).");
+    showToast(`⚠️ STRIKE REGISTERED (${strikes}/${maxAllowed})`, "danger");
+  } else {
+    const reason = `Maximum allowed anti-cheat strikes exceeded (${strikes}/${maxAllowed}).`;
+    triggerTermination(reason);
+    // DISPATCH SINGLE ATOMIC WRITE TO PERSISTENT DATABASE UPON DISQUALIFICATION
+    dispatchSingleAtomicWrite(reason, true);
   }
 }
 
@@ -741,8 +756,37 @@ function triggerTermination(reason) {
   codeEditor.readOnly = true;
   codeEditor.style.opacity = "0.4";
 
-  terminatedDetails.innerText = `CODER CALLSIGN: ${USER_ID}\nCHALLENGE ID: ${CHALLENGE_ID}\nTERMINATION TIMESTAMP: ${new Date().toISOString()}\nOFFICIAL REASON: ${reason}`;
+  terminatedDetails.innerText = `CODER CALLSIGN: ${USER_ID}\nSESSION ID: ${activeSessionId}\nTERMINATION TIMESTAMP: ${new Date().toISOString()}\nOFFICIAL REASON: ${reason}\n\n[PERSISTENCE]: Local audit dossier recorded and persisted via single atomic database write.`;
   terminatedModal.classList.add("active");
+}
+
+/* ================== SINGLE ATOMIC DATABASE DISPATCHER ================== */
+async function dispatchSingleAtomicWrite(reason = null, isDisqualified = false) {
+  if (isFinalWriteDispatched) return;
+  isFinalWriteDispatched = true;
+
+  try {
+    const res = await fetch(`${API_BASE}/sessions/${activeSessionId}/submit-final`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        userId: USER_ID,
+        username: USER_ID,
+        sourceCode: codeEditor.value,
+        language: languageSelect.value,
+        strikes,
+        telemetryEvents: localTelemetryEvents,
+        snapshotsCount: localSnapshots.length,
+        terminationReason: reason,
+        isDisqualified
+      })
+    });
+
+    const data = await res.json();
+    return data;
+  } catch (err) {
+    console.error("Single atomic write failed:", err);
+  }
 }
 
 /* ================== DUAL-MONITOR & BLUR INTERCEPT ================== */
@@ -833,18 +877,174 @@ function launchWorkspace() {
   hudLobbyLinks.style.display = "none";
 }
 
-// Button: Enter Arena from Hero
-document.getElementById("btnEnterArena").addEventListener("click", () => {
-  const callsignInput = document.getElementById("coderCallsign");
-  if (callsignInput.value.trim().length > 0) {
-    USER_ID = callsignInput.value.trim().toUpperCase();
+function escapeHtml(str) {
+  if (!str) return "";
+  return String(str)
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+function loadSessionChallenge(sessionData) {
+  if (!sessionData || !sessionData.problem) return;
+
+  const prob = sessionData.problem;
+  currentProblemSlug = prob.slug || "custom-challenge";
+
+  // Breadcrumbs & Header
+  const bc = document.getElementById("breadcrumbId");
+  if (bc) bc.innerText = currentProblemSlug.toUpperCase();
+  
+  const pt = document.getElementById("problemTitle");
+  if (pt) pt.innerText = prob.title || "Custom Challenge";
+
+  const pd = document.getElementById("probDifficulty");
+  if (pd) {
+    pd.innerText = (prob.difficulty || "EASY").toUpperCase();
+    pd.className = `sharp-tag tag-${(prob.difficulty || "easy").toLowerCase()}`;
   }
-  entryModal.classList.add("active");
+
+  const pp = document.getElementById("probPoints");
+  if (pp) pp.innerText = `${prob.points || 100} PTS`;
+
+  const pc = document.getElementById("probCpu");
+  if (pc) pc.innerText = `${prob.timeLimitMs || 2000}MS CPU`;
+
+  const pr = document.getElementById("probRam");
+  if (pr) pr.innerText = `${Math.round((prob.memoryLimitKb || 262144) / 1024)}MB RAM`;
+
+  // Active Session Badge
+  const sb = document.getElementById("activeSessionBadge");
+  if (sb) sb.innerText = `SESSION: ${sessionData.id}`;
+
+  // Statement Content
+  const pContent = document.getElementById("problemContent");
+  if (pContent) {
+    let statementHtml = `
+      <div class="content-block">
+        ${prob.statement.split("\n\n").map(para => `<p>${escapeHtml(para).replace(/\n/g, "<br>")}</p>`).join("")}
+      </div>
+    `;
+
+    // Render Public Sample Cases
+    if (prob.samples && prob.samples.length > 0) {
+      statementHtml += prob.samples.map((s, idx) => `
+        <div class="tactical-case-block">
+          <div class="case-header">SAMPLE CASE 0${idx + 1}</div>
+          <div class="case-row">
+            <span class="case-key">INPUT:</span>
+            <pre style="margin: 0; background: transparent; font-family: var(--font-code); color: #fff;">${escapeHtml(s.input || s.in || "")}</pre>
+          </div>
+          <div class="case-row">
+            <span class="case-key">OUTPUT:</span>
+            <pre style="margin: 0; background: transparent; font-family: var(--font-code); color: #fff;">${escapeHtml(s.expectedOutput || s.out || "")}</pre>
+          </div>
+        </div>
+      `).join("");
+    }
+
+    // Constraints & Proctor Box
+    statementHtml += `
+      <div class="constraints-block">
+        <div class="constraints-title">OPERATIONAL CONSTRAINTS</div>
+        <ul class="constraints-list">
+          <li>CPU Execution Bound: <code>${prob.timeLimitMs || 2000}ms</code></li>
+          <li>RAM Boundary: <code>${Math.round((prob.memoryLimitKb || 262144) / 1024)}MB</code></li>
+          <li>Persistence Protocol: Single atomic write upon official submission or termination.</li>
+        </ul>
+      </div>
+
+      <div class="proctor-alert-box">
+        <div class="alert-title">🔒 PROCTORED RULES ENFORCED (SESSION ${sessionData.id})</div>
+        <p>
+          ${sessionRules.fullscreenEnforced ? "Fullscreen locked. " : ""}
+          ${sessionRules.blockPaste ? "External paste purged. " : ""}
+          Max violation strikes allowed: <strong>${sessionRules.maxStrikes}</strong>.
+        </p>
+      </div>
+    `;
+
+    pContent.innerHTML = statementHtml;
+  }
+
+  // Sample Test Case pills in Console
+  if (prob.samples && prob.samples.length > 0) {
+    const formattedSamples = prob.samples.map((s, idx) => ({
+      id: String(idx + 1),
+      in: s.input || s.in || "",
+      out: s.expectedOutput || s.out || ""
+    }));
+    renderTestCasePills(formattedSamples);
+  }
+
+  // Restore cached code or starter template
+  const lang = languageSelect.value;
+  const cached = localStorage.getItem(`kiln_snapshot_${sessionData.id}_${currentProblemSlug}`);
+  if (cached && cached.trim().length > 0) {
+    codeEditor.value = cached;
+  } else if (prob.starterTemplates && prob.starterTemplates[lang]) {
+    codeEditor.value = prob.starterTemplates[lang];
+  } else if (STARTER_TEMPLATES[currentProblemSlug] && STARTER_TEMPLATES[currentProblemSlug][lang]) {
+    codeEditor.value = STARTER_TEMPLATES[currentProblemSlug][lang];
+  } else if (STARTER_TEMPLATES["two-sum"][lang]) {
+    codeEditor.value = STARTER_TEMPLATES["two-sum"][lang];
+  }
+
+  updateGutters();
+  updateCursorLocation();
+}
+
+// Button: Enter Arena from Hero (Dynamic Session Query)
+document.getElementById("btnEnterArena").addEventListener("click", async () => {
+  const callsignInput = document.getElementById("coderCallsign");
+  const callsign = (callsignInput ? callsignInput.value.trim() : "") || `CODER_${Math.floor(1000 + Math.random() * 9000)}`;
+  USER_ID = callsign.toUpperCase();
+  localStorage.setItem("kiln_callsign", USER_ID);
+
+  const sessionInput = document.getElementById("sessionCodeInput");
+  const sessionCode = (sessionInput ? sessionInput.value.trim() : "") || "KILN-1001";
+  activeSessionId = sessionCode.toUpperCase();
+
+  const enterBtn = document.getElementById("btnEnterArena");
+  enterBtn.disabled = true;
+  enterBtn.innerText = "QUERYING SESSION...";
+
+  try {
+    const res = await fetch(`${API_BASE}/sessions/${activeSessionId}`);
+    const data = await res.json();
+
+    if (!data.success) {
+      showToast(`❌ Session '${activeSessionId}' not found. Please verify with Admin.`, "danger");
+      return;
+    }
+
+    activeSessionData = data.data;
+    sessionRules = activeSessionData.rules || sessionRules;
+    contestTimeRemaining = (activeSessionData.durationMinutes || 45) * 60;
+
+    // Reset local telemetry and strikes for fresh session
+    localTelemetryEvents = [];
+    localSnapshots = [];
+    strikes = 0;
+    isFinalWriteDispatched = false;
+    strikePips.forEach(p => p && p.classList.remove("active"));
+
+    // Open entry modal with proctoring rules
+    entryModal.classList.add("active");
+
+  } catch (err) {
+    showToast(`Failed to connect to session gateway: ${err.message}`, "danger");
+  } finally {
+    enterBtn.disabled = false;
+    enterBtn.innerHTML = `<span class="btn-icon">⚡</span><span>ENTER ARENA</span>`;
+  }
 });
 
 document.getElementById("btnGrantAccess").addEventListener("click", async () => {
   try {
-    if (document.documentElement.requestFullscreen) {
+    if (sessionRules.fullscreenEnforced && document.documentElement.requestFullscreen) {
       await document.documentElement.requestFullscreen();
     }
   } catch (err) {}
@@ -852,15 +1052,21 @@ document.getElementById("btnGrantAccess").addEventListener("click", async () => 
   entryModal.classList.remove("active");
   launchWorkspace();
   isContestActive = true;
-  logTelemetryEvent("FULLSCREEN_ENTER");
-  showToast(`⚔️ WELCOME TO THE ARENA, ${USER_ID}. MATCH TIMER STARTED.`, "info");
+
+  // Load the authorized challenge dynamically into the workspace
+  if (activeSessionData) {
+    loadSessionChallenge(activeSessionData);
+  }
+
+  logTelemetryEvent("ARENA_ENTRY_GRANTED", { sessionId: activeSessionId, callsign: USER_ID });
+  showToast(`⚔️ WELCOME TO THE ARENA, ${USER_ID}. SESSION ${activeSessionId} ACTIVE.`, "info");
   startMatchClock();
 });
 
 document.getElementById("btnAcknowledgeStrike").addEventListener("click", async () => {
   strikeModal.classList.remove("active");
   try {
-    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+    if (sessionRules.fullscreenEnforced && !document.fullscreenElement && document.documentElement.requestFullscreen) {
       await document.documentElement.requestFullscreen();
     }
   } catch (err) {}
@@ -869,7 +1075,7 @@ document.getElementById("btnAcknowledgeStrike").addEventListener("click", async 
 document.getElementById("btnCancelExit").addEventListener("click", async () => {
   exitModal.classList.remove("active");
   try {
-    if (!document.fullscreenElement && document.documentElement.requestFullscreen) {
+    if (sessionRules.fullscreenEnforced && !document.fullscreenElement && document.documentElement.requestFullscreen) {
       await document.documentElement.requestFullscreen();
     }
   } catch (err) {}
@@ -881,6 +1087,10 @@ document.getElementById("btnConfirmSubmitAndExit").addEventListener("click", asy
 
 document.getElementById("btnConfirmAbandon").addEventListener("click", async () => {
   await handleExitAction("ABANDON_AND_TERMINATE", "User abandoned match via Escape modal");
+});
+
+document.getElementById("btnExitMatch").addEventListener("click", () => {
+  exitModal.classList.add("active");
 });
 
 document.getElementById("btnExitMatch").addEventListener("click", () => {
@@ -1134,13 +1344,19 @@ function initConsoleTabs() {
     consoleLog.innerText = `[KILN ENGINE] Ingesting source code for ${currentProblemSlug.toUpperCase()}...\n[SANDBOX] Initializing isolated process enclaves...\nEvaluating public sample test cases...`;
 
     try {
+      // Check if session has custom sample test cases
+      const testCasesPayload = (activeSessionData && activeSessionData.problem && activeSessionData.problem.samples)
+        ? activeSessionData.problem.samples
+        : undefined;
+
       const res = await fetch(`${API_BASE}/submissions/run`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           problem_id: currentProblemSlug,
           language: languageSelect.value,
-          source_code: codeEditor.value
+          source_code: codeEditor.value,
+          tests: testCasesPayload
         })
       });
 
@@ -1203,7 +1419,7 @@ function initConsoleTabs() {
     }
   });
 
-  // Submit Solution Button (Real Official Submission & Leaderboard Ranking)
+  // Submit Solution Button (Real Official Submission via Single Atomic Write)
   document.getElementById("btnSubmit").addEventListener("click", async () => {
     tabOutput.click();
     const verdictTag = document.getElementById("verdictTag");
@@ -1213,49 +1429,53 @@ function initConsoleTabs() {
 
     verdictTag.className = "verdict-tag";
     verdictTag.innerText = "EVALUATING...";
-    verdictTime.innerText = "Dispatching official submission against all public & hidden benchmark cases...";
+    verdictTime.innerText = `Dispatching official submission for Session ${activeSessionId} via single atomic write...`;
     testResultsList.style.display = "none";
     testResultsList.innerHTML = "";
-    consoleLog.innerText = `[SUBMISSION] Dispatched for ${USER_ID} on ${currentProblemSlug.toUpperCase()}...\n[ENGINE] Evaluating against full test suite...`;
+    consoleLog.innerText = `[SUBMISSION] Dispatched for ${USER_ID} on session ${activeSessionId}...\n[ENGINE] Evaluating against full test suite (samples & hidden)...\n[DATABASE] Flushed single atomic write (Firebase + Local Persistent Engine)...`;
 
     try {
-      const res = await fetch(`${API_BASE}/submissions`, {
+      const subRes = await fetch(`${API_BASE}/sessions/${activeSessionId}/submit-final`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          problem_id: currentProblemSlug,
-          language: languageSelect.value,
-          source_code: codeEditor.value,
+          userId: USER_ID,
           username: USER_ID,
-          user_id: USER_ID,
-          contest_id: CHALLENGE_ID
+          sourceCode: codeEditor.value,
+          language: languageSelect.value,
+          strikes,
+          telemetryEvents: localTelemetryEvents,
+          snapshotsCount: localSnapshots.length,
+          terminationReason: null,
+          isDisqualified: false
         })
       });
 
-      const subData = await res.json();
-      if (!subData.success && subData.error) {
-        throw new Error(subData.error);
+      const subData = await subRes.json();
+      if (!subData.success) {
+        throw new Error(subData.error || "Submission failed");
       }
 
-      const evalData = subData.evaluation;
+      const resultData = subData.data;
+      const isAccepted = resultData.verdict === "Accepted";
 
-      verdictTag.innerText = `${subData.status.toUpperCase()} // ${subData.score} PTS`;
-      if (subData.status === "accepted") {
+      verdictTag.innerText = `${resultData.verdict.toUpperCase()} // ${resultData.score} PTS`;
+      if (isAccepted) {
         verdictTag.className = "verdict-tag accepted";
-        showToast(`🎉 VERDICT: ACCEPTED (+${subData.score} PTS)`, "success");
+        showToast(`🎉 VERDICT: ACCEPTED (+${resultData.score} PTS) [SINGLE WRITE PERSISTED]`, "success");
       } else {
         verdictTag.className = "verdict-tag";
         verdictTag.style.background = "#ef4444";
         verdictTag.style.color = "#fff";
-        showToast(`❌ VERDICT: ${subData.status.toUpperCase()}`, "danger");
+        showToast(`❌ VERDICT: ${resultData.verdict.toUpperCase()}`, "danger");
       }
 
-      verdictTime.innerText = `Submission ID: ${subData.id} | Execution: ${subData.runtime_ms}ms | Score: ${subData.score} Pts`;
+      verdictTime.innerText = `Audit ID: ${resultData.submissionId} | Runtime: ${resultData.runtimeMs}ms | Score: ${resultData.score} Pts | DB: ${resultData.dbMode.toUpperCase()}`;
 
       // Render Test Cards
-      if (evalData && evalData.results && evalData.results.length > 0) {
+      if (resultData.results && resultData.results.length > 0) {
         testResultsList.style.display = "flex";
-        testResultsList.innerHTML = evalData.results.map((r, i) => `
+        testResultsList.innerHTML = resultData.results.map((r, i) => `
           <div class="tc-result-card ${r.passed ? "passed" : "failed"}">
             <div class="tc-card-header">
               <span>TEST CASE #${i + 1} (${r.isSample ? "SAMPLE" : "HIDDEN BENCHMARK"})</span>
@@ -1277,7 +1497,7 @@ function initConsoleTabs() {
         `).join("");
       }
 
-      consoleLog.innerText = (evalData?.logs || []).join("\n");
+      consoleLog.innerText = `[KILN SINGLE-WRITE PERSISTENCE CONFIRMED]\nDatabase Mode: ${resultData.dbMode}\nAudit ID: ${resultData.submissionId}\nVerdict: ${resultData.verdict}\nScore: ${resultData.score} Points\nStrikes: ${resultData.strikes}\nTelemetry Violations Recorded: ${localTelemetryEvents.length}\nIdle Snapshots Buffered: ${localSnapshots.length}`;
 
     } catch (err) {
       verdictTag.className = "verdict-tag";
@@ -1292,7 +1512,24 @@ function initConsoleTabs() {
 
 /* ================== WORKSPACE INITIALIZATION ================== */
 function setupWorkspace() {
-  const cachedCode = localStorage.getItem(`kiln_snapshot_${CHALLENGE_ID}_${currentProblemSlug}`);
+  // 1. Read URL query param for session ID (e.g. ?session=KILN-7492)
+  const urlParams = new URLSearchParams(window.location.search);
+  const sessionParam = urlParams.get("session");
+  const sessionInput = document.getElementById("sessionCodeInput");
+  if (sessionParam && sessionInput) {
+    sessionInput.value = sessionParam.toUpperCase();
+    activeSessionId = sessionParam.toUpperCase();
+  }
+
+  // 2. Pre-fill callsign from localStorage if available
+  const savedCallsign = localStorage.getItem("kiln_callsign");
+  const callsignInput = document.getElementById("coderCallsign");
+  if (savedCallsign && callsignInput) {
+    callsignInput.value = savedCallsign;
+    USER_ID = savedCallsign;
+  }
+
+  const cachedCode = localStorage.getItem(`kiln_snapshot_${activeSessionId}_${currentProblemSlug}`);
   if (cachedCode && cachedCode.trim().length > 0) {
     codeEditor.value = cachedCode;
     showToast("Restored from 10-second idle snapshot recovery cache", "info");
@@ -1323,7 +1560,9 @@ function setupWorkspace() {
   // Language selector
   languageSelect.addEventListener("change", (e) => {
     const lang = e.target.value;
-    const problemTemplates = STARTER_TEMPLATES[currentProblemSlug] || STARTER_TEMPLATES["two-sum"];
+    const problemTemplates = (activeSessionData && activeSessionData.problem && activeSessionData.problem.starterTemplates) 
+      || STARTER_TEMPLATES[currentProblemSlug] 
+      || STARTER_TEMPLATES["two-sum"];
     if (problemTemplates && problemTemplates[lang]) {
       codeEditor.value = problemTemplates[lang];
       updateGutters();

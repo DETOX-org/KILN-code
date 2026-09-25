@@ -66,6 +66,7 @@
         <button class="btn-link" id="navLobbyBtn">ARENA</button>
         <button class="btn-link" id="navLeaderboardBtn">LEADERBOARD</button>
         <button class="btn-link" id="navProtocolBtn">PROTOCOL</button>
+        <a href="admin.html" class="btn-link" style="color: var(--orange-flame); text-decoration: none;" id="navAdminBtn">⚙️ ADMIN PORTAL</a>
       </div>
     </div>
   </header>
@@ -110,6 +111,31 @@
               autocomplete="off"
               spellcheck="false"
             >
+          </div>
+        </div>
+
+        <!-- Session ID / Access Code Field -->
+        <div class="callsign-group" style="margin-top: 14px;">
+          <label class="input-label" for="sessionCodeInput">
+            <span>CHALLENGE SESSION ID // ACCESS CODE</span>
+            <span class="input-req" style="color: var(--orange-flame);">DEFAULT: KILN-1001</span>
+          </label>
+          <div class="input-frame">
+            <span class="input-prefix">#</span>
+            <input 
+              type="text" 
+              id="sessionCodeInput" 
+              class="input-sharp" 
+              placeholder="e.g. KILN-1001" 
+              maxlength="16"
+              autocomplete="off"
+              spellcheck="false"
+              value="KILN-1001"
+            >
+          </div>
+          <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 4px; display: flex; justify-content: space-between;">
+            <span>Custom challenge &amp; rules load dynamically from Session ID</span>
+            <a href="admin.html" style="color: var(--orange-flame); text-decoration: none;">Admin Configurator &gt;</a>
           </div>
         </div>
 
@@ -222,6 +248,7 @@
         </div>
         <h2 class="dossier-title" id="problemTitle">1. Two Sum</h2>
         <div class="dossier-tags">
+          <span class="sharp-tag tag-spec" id="activeSessionBadge" style="border-color: var(--orange-flame); color: #fff;">SESSION: KILN-1001</span>
           <span class="sharp-tag tag-easy" id="probDifficulty">EASY</span>
           <span class="sharp-tag tag-pts" id="probPoints">100 PTS</span>
           <span class="sharp-tag tag-spec" id="probCpu">2000MS CPU</span>
