@@ -44,7 +44,7 @@ export const getProblems = (req: Request, res: Response, next: NextFunction): vo
 export const getProblemBySlug = (req: Request, res: Response, next: NextFunction): void => {
   try {
     const slug = Array.isArray(req.params.slug) ? req.params.slug[0] : req.params.slug;
-    const problem = problemStore.findBySlug(slug);
+    const problem = problemStore.findBySlug(slug) || problemStore.findById(slug);
 
     if (!problem || !problem.isPublished) {
       res.status(404).json({
