@@ -71,8 +71,81 @@ You must do this by modifying the input array **in-place** with $O(1)$ extra mem
         input: "hello",
         expectedOutput: "olleh",
         isSample: true,
-        points: 100,
+        points: 40,
         orderIndex: 0
+      },
+      {
+        id: "tc-004b",
+        problemId: "p1010000-0000-0000-0000-000000000002",
+        input: "Hannah",
+        expectedOutput: "hannaH",
+        isSample: true,
+        points: 30,
+        orderIndex: 1
+      },
+      {
+        id: "tc-004c",
+        problemId: "p1010000-0000-0000-0000-000000000002",
+        input: "DETOX",
+        expectedOutput: "XOTED",
+        isSample: false,
+        points: 30,
+        orderIndex: 2
+      }
+    ]
+  },
+  {
+    id: "p1010000-0000-0000-0000-000000000003",
+    slug: "palindrome-number",
+    title: "Palindrome Number",
+    statement: `Given an integer \`x\`, return \`true\` if \`x\` is a palindrome, and \`false\` otherwise.
+
+An integer is a palindrome when it reads the same backward as forward. For example, \`121\` is a palindrome while \`123\` is not.`,
+    difficulty: "easy",
+    points: 100,
+    timeLimitMs: 1000,
+    memoryLimitKb: 262144,
+    isPublished: true,
+    tags: ["math", "string"],
+    createdBy: "admin-user-id",
+    createdAt: new Date("2026-01-03T00:00:00Z").toISOString(),
+    updatedAt: new Date("2026-01-03T00:00:00Z").toISOString(),
+    testCases: [
+      {
+        id: "tc-005",
+        problemId: "p1010000-0000-0000-0000-000000000003",
+        input: "121",
+        expectedOutput: "true",
+        isSample: true,
+        points: 33,
+        orderIndex: 0
+      },
+      {
+        id: "tc-006",
+        problemId: "p1010000-0000-0000-0000-000000000003",
+        input: "-121",
+        expectedOutput: "false",
+        isSample: true,
+        points: 33,
+        orderIndex: 1
+      },
+      {
+        id: "tc-007",
+        problemId: "p1010000-0000-0000-0000-000000000003",
+        input: "10",
+        expectedOutput: "false",
+        isSample: true,
+        points: 34,
+        orderIndex: 2
+      },
+      {
+        id: "tc-008",
+        problemId: "p1010000-0000-0000-0000-000000000003",
+        input: "12321",
+        expectedOutput: "true",
+        isSample: false,
+        points: 50,
+        orderIndex: 3
       }
     ]
   }

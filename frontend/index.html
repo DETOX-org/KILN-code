@@ -3,227 +3,608 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>DETOX Code — Proctored Timed Challenge Workspace</title>
+  <title>DETOX Code — Competitive Arena & Proctored Workspace</title>
+  
+  <!-- High-impact Industrial & Technical Typography -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+  
   <link rel="stylesheet" href="css/style.css">
 </head>
-<body class="theme-dark">
+<body class="theme-arena">
 
-  <!-- Top Navigation & Challenge Control Header -->
-  <header class="workspace-header">
-    <div class="header-left">
-      <div class="brand-logo">
-        <span class="logo-badge">DETOX</span>
-        <span class="logo-text">Code</span>
+  <!-- ========================================================================= -->
+  <!-- TOP GLOBAL HUD NAVIGATION                                                 -->
+  <!-- ========================================================================= -->
+  <header class="hud-header">
+    <div class="hud-left">
+      <div class="hud-brand" id="brandHomeBtn">
+        <span class="hud-brand-tag">DETOX</span>
+        <span class="hud-brand-title">CODE ARENA</span>
       </div>
-      <div class="challenge-meta">
-        <span class="challenge-title" id="challengeTitle">Community Contest #1: Two Sum</span>
-        <span class="challenge-badge status-live" id="sessionStatusBadge">PROCTORED LIVE</span>
-      </div>
-    </div>
-
-    <div class="header-center">
-      <div class="timer-container" id="timerContainer">
-        <span class="timer-icon">⏱</span>
-        <span class="timer-display" id="timerDisplay">45:00</span>
+      <div class="hud-telemetry-badge">
+        <span class="status-pip"></span>
+        <span class="telemetry-text">SERVER: ONLINE // KILN-V1.0</span>
       </div>
     </div>
 
-    <div class="header-right">
-      <!-- Anti-Cheat Strike Indicator -->
-      <div class="strike-panel" title="Anti-Cheat Violation Strikes (Max 3)">
-        <span class="strike-label">Strikes:</span>
-        <div class="strike-dots" id="strikeDots">
-          <span class="strike-dot" id="dot1"></span>
-          <span class="strike-dot" id="dot2"></span>
-          <span class="strike-dot" id="dot3"></span>
+    <!-- Active In-Match HUD Center (Visible when match active) -->
+    <div class="hud-match-center" id="hudMatchCenter" style="display: none;">
+      <div class="hud-timer-box">
+        <span class="hud-timer-label">TIME REMAINING</span>
+        <span class="hud-timer-val" id="hudTimer">45:00</span>
+      </div>
+    </div>
+
+    <div class="hud-right">
+      <!-- In-Match Strikes Indicator -->
+      <div class="hud-strikes-panel" id="hudStrikesPanel" style="display: none;">
+        <span class="hud-strikes-label">STRIKES</span>
+        <div class="strike-pips" id="strikePips">
+          <span class="strike-pip" id="pip1"></span>
+          <span class="strike-pip" id="pip2"></span>
+          <span class="strike-pip" id="pip3"></span>
         </div>
       </div>
 
-      <!-- 10-Second Idle Auto-Save Status -->
-      <div class="autosave-indicator" id="autosaveIndicator">
-        <span class="autosave-dot"></span>
-        <span class="autosave-text" id="autosaveText">Idle (Saved)</span>
+      <!-- In-Match 10s Idle Autosave Indicator -->
+      <div class="hud-autosave-panel" id="hudAutosavePanel" style="display: none;">
+        <span class="autosave-led"></span>
+        <span class="autosave-status" id="autosaveStatus">IDLE (SAVED)</span>
       </div>
 
-      <div class="action-buttons">
-        <button class="btn btn-secondary" id="btnRunTests">▶ Run Tests</button>
-        <button class="btn btn-primary" id="btnSubmit">Submit Solution</button>
-        <button class="btn btn-danger-outline" id="btnExit">Exit (Esc)</button>
+      <!-- In-Match Action Controls -->
+      <div class="hud-match-actions" id="hudMatchActions" style="display: none;">
+        <button class="btn btn-sharp btn-secondary" id="btnRunTests">▶ RUN TESTS</button>
+        <button class="btn btn-sharp btn-primary" id="btnSubmit">⚡ SUBMIT</button>
+        <button class="btn btn-sharp btn-danger" id="btnExitMatch">ESC // EXIT</button>
+      </div>
+
+      <!-- Lobby Nav Links (Visible when in lobby) -->
+      <div class="hud-lobby-links" id="hudLobbyLinks">
+        <button class="btn-link" id="navLobbyBtn">ARENA</button>
+        <button class="btn-link" id="navLeaderboardBtn">LEADERBOARD</button>
+        <button class="btn-link" id="navProtocolBtn">PROTOCOL</button>
       </div>
     </div>
   </header>
 
-  <!-- Main Workspace Layout -->
-  <main class="workspace-body">
-    <!-- Left Pane: Problem Description -->
-    <section class="problem-pane">
-      <div class="pane-header">
-        <h1 class="problem-title" id="problemTitle">1. Two Sum</h1>
-        <div class="problem-tags">
-          <span class="tag tag-difficulty-easy" id="problemDifficulty">Easy</span>
-          <span class="tag tag-points" id="problemPoints">100 Pts</span>
-          <span class="tag tag-time">Time: 2000ms</span>
-          <span class="tag tag-mem">Mem: 256MB</span>
-        </div>
-      </div>
-
-      <div class="problem-content" id="problemContent">
-        <p>Given an array of integers <code>nums</code> and an integer <code>target</code>, return indices of the two numbers such that they add up to <code>target</code>.</p>
-        <p>You may assume that each input would have <strong>exactly one solution</strong>, and you may not use the same element twice.</p>
-        
-        <h3>Example 1</h3>
-        <div class="code-example">
-          <div class="example-row"><strong>Input:</strong> nums = [2,7,11,15], target = 9</div>
-          <div class="example-row"><strong>Output:</strong> [0,1]</div>
-          <div class="example-row"><strong>Explanation:</strong> Because nums[0] + nums[1] == 9, we return [0, 1].</div>
+  <!-- ========================================================================= -->
+  <!-- VIEW 1: ARENA LOBBY & TODAY'S CHALLENGE (HERO DESIGN IN THE USER STYLE)    -->
+  <!-- ========================================================================= -->
+  <main class="arena-view" id="lobbyView">
+    <div class="arena-container">
+      
+      <!-- Left Column: Mission Briefing, Call-Sign & Direct Entry -->
+      <div class="arena-hero-left">
+        <div class="tactical-subhead">
+          <span class="bracket-accent">[</span>
+          <span class="subhead-text">COMMUNITY TIMED ARENA // PROCTORED COMBAT</span>
+          <span class="bracket-accent">]</span>
         </div>
 
-        <h3>Example 2</h3>
-        <div class="code-example">
-          <div class="example-row"><strong>Input:</strong> nums = [3,2,4], target = 6</div>
-          <div class="example-row"><strong>Output:</strong> [1,2]</div>
+        <h1 class="arena-title">
+          DETOX CODE<br>
+          <span class="title-accent">BATTLEGROUNDS</span>
+        </h1>
+
+        <p class="arena-description">
+          Timed algorithmic combat against real-time community developers. Enter the isolated coding workspace under enforced proctored surveillance, write optimal solutions under the countdown clock, and conquer the live leaderboard.
+        </p>
+
+        <!-- Call-Sign Input Field -->
+        <div class="callsign-group">
+          <label class="input-label" for="coderCallsign">
+            <span>WARRIOR NAME // CODER CALLSIGN</span>
+            <span class="input-req">REQUIRED FOR ROSTER</span>
+          </label>
+          <div class="input-frame">
+            <span class="input-prefix">&gt;</span>
+            <input 
+              type="text" 
+              id="coderCallsign" 
+              class="input-sharp" 
+              placeholder="e.g. CIPHER_ZERO" 
+              maxlength="24"
+              autocomplete="off"
+              spellcheck="false"
+            >
+          </div>
         </div>
 
-        <h3>Constraints</h3>
-        <ul class="constraints-list">
-          <li><code>2 &le; nums.length &le; 10<sup>4</sup></code></li>
-          <li><code>-10<sup>9</sup> &le; nums[i] &le; 10<sup>9</sup></code></li>
-          <li><code>-10<sup>9</sup> &le; target &le; 10<sup>9</sup></code></li>
-          <li>Only one valid answer exists.</li>
-        </ul>
+        <!-- High-Impact Sharp Action Buttons -->
+        <div class="arena-actions">
+          <button class="btn btn-sharp btn-primary btn-hero" id="btnEnterArena">
+            <span class="btn-icon">⚡</span>
+            <span>ENTER ARENA</span>
+          </button>
 
-        <div class="anti-cheat-notice">
-          <h4>🔒 Proctored Integrity Active</h4>
-          <p>This workspace enforces fullscreen locking, focus-loss tracking, and smart clipboard validation. Copying code from external applications will be blocked and recorded as a violation strike.</p>
+          <button class="btn btn-sharp btn-outline btn-hero" id="btnViewRanks">
+            <span class="btn-icon">🏆</span>
+            <span>RANKS // LEADERBOARD</span>
+          </button>
         </div>
-      </div>
-    </section>
 
-    <!-- Right Pane: Code Editor & Execution Console -->
-    <section class="editor-pane">
-      <!-- Editor Toolbar -->
-      <div class="editor-toolbar">
-        <div class="toolbar-left">
-          <label for="languageSelect">Language:</label>
-          <select id="languageSelect" class="select-input">
-            <option value="python" selected>Python 3.10</option>
-            <option value="cpp">C++ (GCC 10.2)</option>
-            <option value="java">Java 15</option>
-            <option value="javascript">JavaScript (Node 18)</option>
-            <option value="typescript">TypeScript 5.0</option>
-            <option value="rust">Rust 1.68</option>
-            <option value="go">Go 1.16</option>
-          </select>
-        </div>
-        <div class="toolbar-right">
-          <span class="editor-status" id="editorStatus">Line 1, Col 1</span>
-          <button class="btn-text" id="btnFullscreenToggle" title="Toggle Fullscreen">⛶ Fullscreen</button>
-        </div>
-      </div>
-
-      <!-- Editor Container with Custom Textarea Engine -->
-      <div class="editor-wrapper">
-        <div class="editor-gutters" id="editorGutters">1</div>
-        <textarea id="codeEditor" class="code-textarea" spellcheck="false" autocomplete="off" autocorrect="off" autocapitalize="off"></textarea>
-      </div>
-
-      <!-- Bottom Interactive Test Console -->
-      <div class="console-pane">
-        <div class="console-header">
-          <span class="console-tab active">Test Cases</span>
-          <span class="console-tab">Execution Output</span>
-          <span class="console-tab" id="snapshotVersionTab">Snapshots (0)</span>
-        </div>
-        <div class="console-body" id="consoleBody">
-          <div class="testcase-view">
-            <div class="testcase-selector">
-              <button class="tc-btn active">Case 1</button>
-              <button class="tc-btn">Case 2</button>
+        <!-- Metric Stat Cards (3 Sharp Boxed Panels matching user reference) -->
+        <div class="tactical-metrics-grid">
+          <div class="metric-card">
+            <div class="metric-icon">👥</div>
+            <div class="metric-data">
+              <span class="metric-number">142</span>
+              <span class="metric-label">PLAYERS ONLINE</span>
             </div>
-            <div class="testcase-data">
-              <div class="field-label">Sample Input:</div>
-              <pre class="field-pre">4&#10;2 7 11 15&#10;9</pre>
-              <div class="field-label">Expected Output:</div>
-              <pre class="field-pre">0 1</pre>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon">🎯</div>
+            <div class="metric-data">
+              <span class="metric-number">03</span>
+              <span class="metric-label">ARENA PROBLEMS</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon">🏆</div>
+            <div class="metric-data">
+              <span class="metric-number">2500</span>
+              <span class="metric-label">TOTAL SCORE POOL</span>
             </div>
           </div>
         </div>
       </div>
-    </section>
+
+      <!-- Right Column: Featured Challenge Dossier Card -->
+      <div class="arena-hero-right">
+        <div class="featured-card">
+          <!-- Card Corner Brackets -->
+          <span class="corner-bracket top-left"></span>
+          <span class="corner-bracket top-right"></span>
+          <span class="corner-bracket bottom-left"></span>
+          <span class="corner-bracket bottom-right"></span>
+
+          <div class="featured-header">
+            <div class="featured-tag">SEASON 01 // DROP 01</div>
+            <h2 class="featured-title">KILN TRIAL // ARRAY CONFLICT</h2>
+            <div class="featured-sub">DAILY TIME-BOUND CHALLENGE</div>
+          </div>
+
+          <!-- Graphic Frame: Tactical Code Visualization Canvas -->
+          <div class="graphic-frame">
+            <div class="graphic-overlay-scanline"></div>
+            <canvas id="matrixCanvas" class="graphic-canvas"></canvas>
+            <div class="graphic-hud-tag">
+              <span class="hud-tag-dot"></span>
+              <span>SANDBOX: PISTON ISOLATED (11 RUNTIMES)</span>
+            </div>
+          </div>
+
+          <!-- Match Parameter Specifications -->
+          <div class="match-specs">
+            <div class="spec-row">
+              <span class="spec-name">MATCH DURATION:</span>
+              <span class="spec-val">45 MINUTES FIXED</span>
+            </div>
+            <div class="spec-row">
+              <span class="spec-name">PROBLEM DIFFICULTY:</span>
+              <span class="spec-val val-difficulty">RATED EASY / MEDIUM</span>
+            </div>
+            <div class="spec-row">
+              <span class="spec-name">INTEGRITY PROTOCOL:</span>
+              <span class="spec-val val-proctored">ENFORCED (FULLSCREEN + 3 STRIKES)</span>
+            </div>
+            <div class="spec-row">
+              <span class="spec-name">SCORE FORMULA:</span>
+              <span class="spec-val">TIME-DECAY + ATTEMPT PENALTY</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
   </main>
 
-  <!-- ================= MODALS & POPUPS ================= -->
+  <!-- ========================================================================= -->
+  <!-- VIEW 2: PROCTORED CODING WORKSPACE (SHARP CORNER INDUSTRIAL HUD)          -->
+  <!-- ========================================================================= -->
+  <main class="workspace-view" id="workspaceView" style="display: none;">
+    
+    <!-- Left Pane: Problem Dossier -->
+    <section class="pane-dossier">
+      <div class="dossier-header">
+        <div class="dossier-breadcrumbs">
+          <span>CHALLENGE</span> / <span id="breadcrumbId">TWO-SUM</span>
+        </div>
+        <div class="problem-switcher-bar" id="problemSwitcherBar">
+          <button class="prob-btn active" data-slug="two-sum">01. TWO SUM</button>
+          <button class="prob-btn" data-slug="reverse-string">02. REVERSE STRING</button>
+          <button class="prob-btn" data-slug="palindrome-number">03. PALINDROME</button>
+        </div>
+        <h2 class="dossier-title" id="problemTitle">1. Two Sum</h2>
+        <div class="dossier-tags">
+          <span class="sharp-tag tag-easy" id="probDifficulty">EASY</span>
+          <span class="sharp-tag tag-pts" id="probPoints">100 PTS</span>
+          <span class="sharp-tag tag-spec" id="probCpu">2000MS CPU</span>
+          <span class="sharp-tag tag-spec" id="probRam">256MB RAM</span>
+        </div>
+      </div>
 
-  <!-- 1. Entry Access Modal: Grants Fullscreen & Screen Proctored Access -->
-  <div class="modal-overlay active" id="entryModal">
-    <div class="modal-card">
-      <div class="modal-icon-shield">🛡️</div>
-      <h2 class="modal-title">Proctored Contest Entry</h2>
-      <p class="modal-description">
-        You are about to enter a <strong>monitored competitive challenge</strong>. To ensure competitive integrity, this workspace requires:
+      <div class="dossier-content" id="problemContent">
+        <div class="content-block">
+          <p>Given an array of integers <code>nums</code> and an integer <code>target</code>, return indices of the two numbers such that they add up to <code>target</code>.</p>
+          <p>You may assume that each input would have <strong>exactly one solution</strong>, and you may not use the same element twice.</p>
+        </div>
+
+        <div class="tactical-case-block">
+          <div class="case-header">EXAMPLE CASE 01</div>
+          <div class="case-row">
+            <span class="case-key">INPUT:</span>
+            <code>nums = [2,7,11,15], target = 9</code>
+          </div>
+          <div class="case-row">
+            <span class="case-key">OUTPUT:</span>
+            <code>[0,1]</code>
+          </div>
+          <div class="case-row">
+            <span class="case-key">EXPLANATION:</span>
+            <span>Because nums[0] + nums[1] == 9, we return [0, 1].</span>
+          </div>
+        </div>
+
+        <div class="tactical-case-block">
+          <div class="case-header">EXAMPLE CASE 02</div>
+          <div class="case-row">
+            <span class="case-key">INPUT:</span>
+            <code>nums = [3,2,4], target = 6</code>
+          </div>
+          <div class="case-row">
+            <span class="case-key">OUTPUT:</span>
+            <code>[1,2]</code>
+          </div>
+        </div>
+
+        <div class="constraints-block">
+          <div class="constraints-title">OPERATIONAL CONSTRAINTS</div>
+          <ul class="constraints-list">
+            <li><code>2 &le; nums.length &le; 10<sup>4</sup></code></li>
+            <li><code>-10<sup>9</sup> &le; nums[i] &le; 10<sup>9</sup></code></li>
+            <li><code>-10<sup>9</sup> &le; target &le; 10<sup>9</sup></code></li>
+            <li>Only one valid answer exists.</li>
+          </ul>
+        </div>
+
+        <div class="proctor-alert-box">
+          <div class="alert-title">🔒 PROCTORED ARENA RULES ACTIVE</div>
+          <p>
+            Fullscreen mode locked. Tab switches, window blurring, and external copy-pastes are prohibited. Pasting from external applications will be purged instantly and increment your violation strikes.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Pane: Code Editor & Console Terminal -->
+    <section class="pane-editor">
+      
+      <!-- Editor Top Toolbar -->
+      <div class="editor-bar">
+        <div class="bar-left">
+          <span class="bar-label">LANGUAGE //</span>
+          <select id="languageSelect" class="sharp-select">
+            <option value="python" selected>Python 3.10.0</option>
+            <option value="cpp">C++ (GCC 10.2)</option>
+            <option value="java">Java 15.0.2</option>
+            <option value="javascript">JavaScript (Node 18)</option>
+            <option value="typescript">TypeScript 5.0</option>
+            <option value="rust">Rust 1.68.2</option>
+            <option value="go">Go 1.16.2</option>
+            <option value="csharp">C# (Mono 6.12)</option>
+            <option value="kotlin">Kotlin 1.8.20</option>
+          </select>
+        </div>
+
+        <div class="bar-right">
+          <span class="cursor-meta" id="cursorMeta">LN 1, COL 1</span>
+          <button class="btn-sharp btn-tool" id="btnFullscreenToggle">⛶ EXPAND</button>
+        </div>
+      </div>
+
+      <!-- Editor Main Frame with Custom Gutter Numbers -->
+      <div class="editor-main-frame">
+        <div class="editor-gutter-numbers" id="editorGutter">1</div>
+        <textarea 
+          id="codeEditor" 
+          class="editor-input-area" 
+          spellcheck="false" 
+          autocomplete="off" 
+          autocorrect="off" 
+          autocapitalize="off"
+        ></textarea>
+      </div>
+
+      <!-- Bottom Console Terminal -->
+      <div class="console-terminal">
+        <div class="terminal-bar">
+          <button class="terminal-tab active" id="tabTests">TEST CASES</button>
+          <button class="terminal-tab" id="tabOutput">OUTPUT TERMINAL</button>
+          <button class="terminal-tab" id="tabSnapshots">10S SNAPSHOTS (0)</button>
+        </div>
+
+        <div class="terminal-body" id="terminalBody">
+          <!-- Test Cases View -->
+          <div class="terminal-section" id="sectionTests">
+            <div class="tc-pills" id="tcPillsContainer">
+              <button class="tc-pill active" data-tc="1">CASE 01</button>
+              <button class="tc-pill" data-tc="2">CASE 02</button>
+            </div>
+            <div class="tc-io-grid">
+              <div class="io-col">
+                <span class="io-label">SAMPLE INPUT</span>
+                <pre class="io-pre" id="sampleInput">4&#10;2 7 11 15&#10;9</pre>
+              </div>
+              <div class="io-col">
+                <span class="io-label">EXPECTED OUTPUT</span>
+                <pre class="io-pre" id="sampleOutput">0 1</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Execution Output View -->
+          <div class="terminal-section" id="sectionOutput" style="display: none;">
+            <div class="verdict-banner" id="verdictBanner">
+              <span class="verdict-tag" id="verdictTag">READY</span>
+              <span class="verdict-time" id="verdictTime">Click "Run Tests" or "Submit"</span>
+            </div>
+            <div class="test-results-container" id="testResultsList" style="display: none;"></div>
+            <pre class="io-pre console-log" id="consoleLog">Execution logs will display here upon evaluation...</pre>
+          </div>
+
+          <!-- Snapshots View -->
+          <div class="terminal-section" id="sectionSnapshots" style="display: none;">
+            <div class="snapshot-list" id="snapshotList">
+              <div class="snapshot-row">No 10-second idle snapshots created yet. Pause typing for 10 seconds to generate.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODALS & POPUPS (ALL 100% SHARP CORNERS & TACTICAL HUD BORDERS)           -->
+  <!-- ========================================================================= -->
+
+  <!-- 1. Proctored Access Grant Modal -->
+  <div class="tactical-modal-overlay" id="entryModal">
+    <div class="tactical-modal-card">
+      <span class="corner-bracket top-left"></span>
+      <span class="corner-bracket top-right"></span>
+      <span class="corner-bracket bottom-left"></span>
+      <span class="corner-bracket bottom-right"></span>
+
+      <div class="modal-badge-warn">PROCTORED ENTRY ACCESS</div>
+      <h2 class="modal-heading">GRANT FULLSCREEN &amp; INTEGRITY ACCESS</h2>
+      
+      <p class="modal-lead">
+        You are entering a <strong>monitored timed challenge</strong>. Anti-cheat protocols are active:
       </p>
-      <ul class="modal-rules">
-        <li><strong>Full Screen Lock:</strong> The challenge will expand to full screen. Exiting will trigger warning strikes.</li>
-        <li><strong>Focus Monitoring:</strong> Switching tabs or opening applications on other monitors will be logged.</li>
-        <li><strong>Smart Clipboard:</strong> Pasting external code is prohibited. Only code copied within this workspace is allowed.</li>
-        <li><strong>Auto-Save:</strong> Code is automatically saved locally every 10 seconds of idle pause.</li>
-      </ul>
-      <div class="modal-actions">
-        <button class="btn btn-primary btn-large" id="btnGrantAccess">I Agree & Enter Fullscreen</button>
+
+      <div class="rules-box">
+        <div class="rule-item">
+          <span class="rule-marker">01 //</span>
+          <span><strong>FULLSCREEN LOCK:</strong> The workspace will lock to fullscreen. Leaving triggers warning strikes.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-marker">02 //</span>
+          <span><strong>FOCUS SURVEILLANCE:</strong> Window blurring, secondary monitors, or switching tabs is monitored.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-marker">03 //</span>
+          <span><strong>INTERNAL CLIPBOARD ONLY:</strong> External pasted code will be instantly purged and struck.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-marker">04 //</span>
+          <span><strong>10S IDLE AUTO-SAVE:</strong> Code is snapshotted locally and synced on 10s typing pauses.</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-sharp btn-primary btn-large" id="btnGrantAccess">
+          ⚡ I AGREE &amp; ENTER FULLSCREEN
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- 2. Escape Key / Exit Warning Modal -->
-  <div class="modal-overlay" id="exitModal">
-    <div class="modal-card modal-card-warning">
-      <div class="modal-icon-warning">⚠️</div>
-      <h2 class="modal-title">Exit Challenge Confirmation</h2>
-      <p class="modal-description">
-        You pressed <strong>Escape</strong> or requested to exit fullscreen. If you leave, your active session will be closed on the server.
+  <!-- 2. Escape Key & Exit Confirmation Modal -->
+  <div class="tactical-modal-overlay" id="exitModal">
+    <div class="tactical-modal-card modal-border-warn">
+      <span class="corner-bracket top-left"></span>
+      <span class="corner-bracket top-right"></span>
+      <span class="corner-bracket bottom-left"></span>
+      <span class="corner-bracket bottom-right"></span>
+
+      <div class="modal-badge-warn">WARNING // EXIT REQUEST</div>
+      <h2 class="modal-heading">ABANDON OR SUBMIT ATTEMPT?</h2>
+
+      <p class="modal-lead">
+        You initiated an exit via the <strong>Escape</strong> key or window control. Leaving terminates your session on the server.
       </p>
-      <div class="modal-actions-stacked">
-        <button class="btn btn-primary" id="btnConfirmSubmitAndExit">Submit Current Code & Exit</button>
-        <button class="btn btn-danger" id="btnConfirmAbandon">Abandon Challenge & Forfeit</button>
-        <button class="btn btn-secondary" id="btnCancelExit">Cancel & Resume Fullscreen</button>
+
+      <div class="modal-stack-buttons">
+        <button class="btn btn-sharp btn-primary" id="btnConfirmSubmitAndExit">
+          SUBMIT CURRENT CODE &amp; EXIT
+        </button>
+        <button class="btn btn-sharp btn-danger" id="btnConfirmAbandon">
+          ABANDON CHALLENGE &amp; FORFEIT
+        </button>
+        <button class="btn btn-sharp btn-secondary" id="btnCancelExit">
+          CANCEL &amp; RESUME FULLSCREEN
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- 3. Strike Warning Modal (Focus Lost / Window Blur) -->
-  <div class="modal-overlay" id="strikeModal">
-    <div class="modal-card modal-card-danger">
-      <div class="modal-icon-danger">🚨</div>
-      <h2 class="modal-title" id="strikeModalTitle">ANTI-CHEAT VIOLATION: FOCUS LOST</h2>
-      <p class="modal-description" id="strikeModalDesc">
-        You switched tabs or clicked outside the active challenge window. A strike has been recorded against your account.
+  <!-- 3. Strike Warning Modal -->
+  <div class="tactical-modal-overlay" id="strikeModal">
+    <div class="tactical-modal-card modal-border-danger">
+      <span class="corner-bracket top-left"></span>
+      <span class="corner-bracket top-right"></span>
+      <span class="corner-bracket bottom-left"></span>
+      <span class="corner-bracket bottom-right"></span>
+
+      <div class="modal-badge-danger">ANTI-CHEAT VIOLATION</div>
+      <h2 class="modal-heading" id="strikeModalTitle">STRIKE RECORDED: FOCUS LOST</h2>
+
+      <p class="modal-lead" id="strikeModalDesc">
+        You switched tabs or moved mouse focus to another monitor. A violation strike has been registered.
       </p>
-      <div class="strike-meter" id="strikeMeterText">Warning Strike 1 of 3</div>
-      <div class="modal-actions">
-        <button class="btn btn-primary btn-large" id="btnAcknowledgeStrike">Return to Fullscreen Workspace</button>
+
+      <div class="strike-alert-meter" id="strikeAlertMeter">
+        WARNING STRIKE 1 OF 3
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-sharp btn-primary btn-large" id="btnAcknowledgeStrike">
+          RETURN TO FULLSCREEN ARENA
+        </button>
       </div>
     </div>
   </div>
 
   <!-- 4. Session Terminated Modal -->
-  <div class="modal-overlay" id="terminatedModal">
-    <div class="modal-card modal-card-fatal">
-      <div class="modal-icon-fatal">⛔</div>
-      <h2 class="modal-title">Contest Session Terminated</h2>
-      <p class="modal-description" id="terminatedModalDesc">
-        Your challenge attempt has been terminated because you exceeded the maximum allowed integrity strikes (3/3).
+  <div class="tactical-modal-overlay" id="terminatedModal">
+    <div class="tactical-modal-card modal-border-fatal">
+      <span class="corner-bracket top-left"></span>
+      <span class="corner-bracket top-right"></span>
+      <span class="corner-bracket bottom-left"></span>
+      <span class="corner-bracket bottom-right"></span>
+
+      <div class="modal-badge-fatal">SESSION TERMINATED</div>
+      <h2 class="modal-heading">ARENA ACCESS REVOKED</h2>
+
+      <p class="modal-lead" id="terminatedModalDesc">
+        Your challenge attempt has been terminated for exceeding maximum allowed anti-cheat strikes (3/3).
       </p>
-      <div class="terminated-details" id="terminatedDetails"></div>
-      <div class="modal-actions">
-        <button class="btn btn-secondary btn-large" onclick="window.location.reload()">Reload Platform</button>
+
+      <div class="terminated-log-box" id="terminatedDetails"></div>
+
+      <div class="modal-footer">
+        <button class="btn btn-sharp btn-secondary btn-large" onclick="window.location.reload()">
+          RELOAD ARENA
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Toast Notification Container -->
+  <!-- 5. Leaderboard Modal -->
+  <div class="tactical-modal-overlay" id="leaderboardModal">
+    <div class="tactical-modal-card modal-large">
+      <span class="corner-bracket top-left"></span>
+      <span class="corner-bracket top-right"></span>
+      <span class="corner-bracket bottom-left"></span>
+      <span class="corner-bracket bottom-right"></span>
+
+      <div class="modal-badge-info">LIVE ARENA STANDINGS</div>
+      <h2 class="modal-heading">COMMUNITY BATTLEGROUND LEADERBOARD</h2>
+
+      <div class="leaderboard-table-frame">
+        <table class="sharp-table">
+          <thead>
+            <tr>
+              <th>RANK</th>
+              <th>CALLSIGN</th>
+              <th>SOLVED</th>
+              <th>SCORE</th>
+              <th>PENALTY</th>
+              <th>STATUS</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardBody">
+            <tr class="rank-gold">
+              <td>#01</td>
+              <td class="coder-name">CYBER_BLADE</td>
+              <td>3 / 3</td>
+              <td class="score-val">980</td>
+              <td>14m 20s</td>
+              <td><span class="sharp-tag tag-easy">ACCEPTED</span></td>
+            </tr>
+            <tr class="rank-silver">
+              <td>#02</td>
+              <td class="coder-name">VORTEX_DEV</td>
+              <td>3 / 3</td>
+              <td class="score-val">940</td>
+              <td>19m 45s</td>
+              <td><span class="sharp-tag tag-easy">ACCEPTED</span></td>
+            </tr>
+            <tr class="rank-bronze">
+              <td>#03</td>
+              <td class="coder-name">SHADOW_SYNTAX</td>
+              <td>2 / 3</td>
+              <td class="score-val">710</td>
+              <td>22m 10s</td>
+              <td><span class="sharp-tag tag-easy">ACCEPTED</span></td>
+            </tr>
+            <tr>
+              <td>#04</td>
+              <td class="coder-name">NULL_POINTER</td>
+              <td>2 / 3</td>
+              <td class="score-val">680</td>
+              <td>28m 05s</td>
+              <td><span class="sharp-tag tag-easy">ACCEPTED</span></td>
+            </tr>
+            <tr>
+              <td>#05</td>
+              <td class="coder-name">BINARY_GHOST</td>
+              <td>1 / 3</td>
+              <td class="score-val">350</td>
+              <td>33m 50s</td>
+              <td><span class="sharp-tag tag-pts">SUBMITTED</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-sharp btn-secondary" id="btnCloseLeaderboard">CLOSE LEADERBOARD</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Protocol / Rules Modal -->
+  <div class="tactical-modal-overlay" id="protocolModal">
+    <div class="tactical-modal-card">
+      <span class="corner-bracket top-left"></span>
+      <span class="corner-bracket top-right"></span>
+      <span class="corner-bracket bottom-left"></span>
+      <span class="corner-bracket bottom-right"></span>
+
+      <div class="modal-badge-info">SYSTEM SPECIFICATION</div>
+      <h2 class="modal-heading">DETOX COMPETITION PROTOCOL</h2>
+
+      <div class="rules-box">
+        <div class="rule-item">
+          <span class="rule-marker">JUDGE //</span>
+          <span>All submissions compile and execute inside isolated Piston containers with strict CPU and Memory boundaries.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-marker">SCORING //</span>
+          <span>Score = Base Points - (Time Elapsed &times; Decay) - (Wrong Attempts &times; Penalty). Faster solves rank higher.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-marker">INTEGRITY //</span>
+          <span>Fullscreen required. Tab-switching, dual-monitor blur, and external pastes will forfeit your attempt.</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-sharp btn-secondary" id="btnCloseProtocol">CLOSE PROTOCOL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container (Sharp Tactical Toasts) -->
   <div class="toast-container" id="toastContainer"></div>
 
   <script src="js/anticheat.js"></script>

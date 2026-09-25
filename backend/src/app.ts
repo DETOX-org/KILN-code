@@ -1,4 +1,6 @@
 import express from "express";
+import path from "node:path";
+import fs from "node:fs";
 import healthRouter from "./routes/health.routes.js";
 import problemRouter from "./routes/problem.routes.js";
 import submissionRouter from "./routes/submission.routes.js";
@@ -25,12 +27,28 @@ app.use((_req, res, next) => {
   next();
 });
 
-// Mount Routes
+// Mount API Routes
 app.use("/api", healthRouter);
 app.use("/api", telemetryRouter);
 app.use("/api/problems", problemRouter);
 app.use("/api/submissions", submissionRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/contests", contestRouter);
+
+// Mount Static Frontend
+const possibleFrontendDirs = [
+  path.resolve(process.cwd(), "frontend"),
+  path.resolve(process.cwd(), "../frontend")
+];
+
+for (const dir of possibleFrontendDirs) {
+  if (fs.existsSync(dir) && fs.existsSync(path.join(dir, "index.html"))) {
+    app.use(express.static(dir));
+    app.get("/", (_req, res) => {
+      res.sendFile(path.join(dir, "index.html"));
+    });
+    break;
+  }
+}
 
 export default app;
