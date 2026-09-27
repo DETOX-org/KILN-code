@@ -8,6 +8,8 @@ import adminRouter from "./routes/admin.routes.js";
 import contestRouter from "./routes/contest.routes.js";
 import telemetryRouter from "./routes/telemetry.routes.js";
 import sessionRouter from "./routes/session.routes.js";
+import leaderboardRouter from "./routes/leaderboard.routes.js";
+import ratingRouter from "./routes/rating.routes.js";
 
 const app = express();
 
@@ -36,6 +38,8 @@ app.use("/api/submissions", submissionRouter);
 app.use("/api/admin", adminRouter);
 app.use("/api/contests", contestRouter);
 app.use("/api/sessions", sessionRouter);
+app.use("/api/leaderboards", leaderboardRouter);
+app.use("/api/ratings", ratingRouter);
 
 // Mount Static Frontend
 const possibleFrontendDirs = [

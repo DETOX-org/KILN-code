@@ -7,6 +7,7 @@ import ProblemLibraryView from './components/ProblemLibraryView';
 import WorkspaceView from './components/WorkspaceView';
 import AlgorithmVisualizerView from './components/AlgorithmVisualizerView';
 import ContestArenaView from './components/ContestArenaView';
+import LeaderboardView from './components/LeaderboardView';
 import StrictAssessmentView from './components/StrictAssessmentView';
 import PlagiarismReviewView from './components/PlagiarismReviewView';
 import CoursesView from './components/CoursesView';
@@ -77,6 +78,11 @@ export default function Home() {
             <ContestArenaView
               onSelectProblem={handleSelectProblem}
             />
+          )}
+
+          {/* TAB 5b: GLOBAL LEADERBOARD & RANKINGS */}
+          {activeTab === 'leaderboard' && (
+            <LeaderboardView />
           )}
 
           {/* TAB 6: STRICT ASSESSMENT & PROCTORING LOCKDOWN */}

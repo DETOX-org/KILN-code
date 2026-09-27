@@ -31,6 +31,7 @@ export default function Header({
     { id: 'workspace', label: 'Coding IDE', icon: Code2, badge: 'Monaco' },
     { id: 'visualizer', label: 'Visualizer', icon: Cpu, badge: 'AST' },
     { id: 'contests', label: 'Contest Arena', icon: Trophy, badge: 'Live' },
+    { id: 'leaderboard', label: 'Leaderboard', icon: Flame, badge: 'Ranked' },
     { id: 'assessment', label: 'Strict Assessment', icon: ShieldAlert, badge: 'Lockdown' },
     { id: 'plagiarism', label: 'Plagiarism Review', icon: GitCompare, badge: 'MOSS' },
     { id: 'courses', label: 'Courses', icon: Layers, badge: null },
