@@ -1612,4 +1612,198 @@ code {
   align-items: center;
 }
 
+/* ========================================================================= */
+/* TACTICAL LANDING PAGE & ACCESS DECK (STITCH MCP SYSTEM)                   */
+/* ========================================================================= */
+.landing-scroll-view {
+  flex: 1;
+  overflow-y: auto;
+  padding: 30px 24px 60px;
+}
+
+.landing-content-wrapper {
+  max-width: 1280px;
+  margin: 0 auto;
+}
+
+/* Access Control Deck */
+.access-deck-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin: 28px 0 40px;
+}
+
+@media (max-width: 900px) {
+  .access-deck-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.deck-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-strong);
+  padding: 24px;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.deck-card.locked {
+  opacity: 0.65;
+  filter: grayscale(40%);
+  pointer-events: none;
+}
+
+.deck-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 14px;
+}
+
+.deck-card-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.8px;
+}
+
+.btn-google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  background: #ffffff;
+  color: #1f2937;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 600;
+  padding: 12px 20px;
+  border: 1px solid #e5e7eb;
+  cursor: pointer;
+  width: 100%;
+  transition: all 0.2s ease;
+}
+
+.btn-google:hover {
+  background: #f3f4f6;
+  box-shadow: 0 4px 14px rgba(255, 255, 255, 0.2);
+}
+
+.user-auth-badge {
+  background: rgba(16, 185, 129, 0.12);
+  border: 1px solid var(--green-pass);
+  padding: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 10px;
+}
+
+.user-auth-info {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.user-auth-avatar {
+  width: 34px;
+  height: 34px;
+  background: var(--orange-flame);
+  color: #fff;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--font-display);
+}
+
+/* Sealed Problem Dossier */
+.sealed-problem-card {
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px dashed var(--gold-alert);
+  padding: 16px;
+  margin: 14px 0;
+  position: relative;
+}
+
+.sealed-stamp {
+  display: inline-block;
+  background: rgba(239, 68, 68, 0.2);
+  border: 1px solid var(--red-fatal);
+  color: var(--red-fatal);
+  font-family: var(--font-code);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  padding: 3px 8px;
+  margin-bottom: 8px;
+  text-transform: uppercase;
+}
+
+/* Proctor Architecture Matrix */
+.proctor-matrix-section {
+  margin-top: 40px;
+  border-top: 1px solid var(--border-subtle);
+  padding-top: 36px;
+}
+
+.proctor-matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 20px;
+  margin-top: 20px;
+}
+
+@media (max-width: 1024px) {
+  .proctor-matrix-grid {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+@media (max-width: 640px) {
+  .proctor-matrix-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.proctor-feature-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  padding: 20px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.proctor-feature-card:hover {
+  border-color: var(--border-strong);
+  transform: translateY(-2px);
+}
+
+.proctor-feature-icon {
+  font-size: 1.6rem;
+  margin-bottom: 12px;
+  color: var(--orange-flame);
+}
+
+.proctor-feature-title {
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #fff;
+  margin-bottom: 8px;
+  letter-spacing: 0.5px;
+}
+
+.proctor-feature-desc {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+  line-height: 1.5;
+}
+
+
 

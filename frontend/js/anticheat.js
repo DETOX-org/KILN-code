@@ -998,33 +998,244 @@ function loadSessionChallenge(sessionData) {
   updateCursorLocation();
 }
 
-// Button: Enter Arena from Hero (Dynamic Session Query)
-document.getElementById("btnEnterArena").addEventListener("click", async () => {
-  const callsignInput = document.getElementById("coderCallsign");
-  const callsign = (callsignInput ? callsignInput.value.trim() : "") || `CODER_${Math.floor(1000 + Math.random() * 9000)}`;
-  USER_ID = callsign.toUpperCase();
-  localStorage.setItem("kiln_callsign", USER_ID);
+// ================== GOOGLE / FIREBASE AUTHENTICATION & ROOM CODE FLOW ==================
+let currentUser = JSON.parse(localStorage.getItem("detox_user") || "null");
+let activeRoomData = null;
 
-  const sessionInput = document.getElementById("sessionCodeInput");
-  const sessionCode = (sessionInput ? sessionInput.value.trim() : "") || "KILN-1001";
-  activeSessionId = sessionCode.toUpperCase();
+// Firebase Init if config present
+let firebaseAuth = null;
+try {
+  if (window.firebase && !firebase.apps.length) {
+    const savedFbConfig = JSON.parse(localStorage.getItem("detox_fb_config") || "null");
+    if (savedFbConfig && savedFbConfig.apiKey && savedFbConfig.projectId) {
+      firebase.initializeApp(savedFbConfig);
+      firebaseAuth = firebase.auth();
+    }
+  } else if (window.firebase && firebase.apps.length) {
+    firebaseAuth = firebase.auth();
+  }
+} catch (e) {}
 
-  const enterBtn = document.getElementById("btnEnterArena");
-  enterBtn.disabled = true;
-  enterBtn.innerText = "QUERYING SESSION...";
+function updateUserAuthUI() {
+  const btnNavLogin = document.getElementById("btnNavLogin");
+  const userLoggedInPill = document.getElementById("userLoggedInPill");
+  const navUserAvatar = document.getElementById("navUserAvatar");
+  const navUserName = document.getElementById("navUserName");
 
+  const authLoggedOutBox = document.getElementById("authLoggedOutBox");
+  const authLoggedInBox = document.getElementById("authLoggedInBox");
+  const operatorAvatar = document.getElementById("operatorAvatar");
+  const operatorDisplayName = document.getElementById("operatorDisplayName");
+  const operatorEmail = document.getElementById("operatorEmail");
+  const authStatusPill = document.getElementById("authStatusPill");
+
+  const deckCardRoom = document.getElementById("deckCardRoom");
+  const roomTerminalStatus = document.getElementById("roomTerminalStatus");
+  const roomLockedNotice = document.getElementById("roomLockedNotice");
+  const coderCallsignInput = document.getElementById("coderCallsign");
+
+  if (currentUser) {
+    if (btnNavLogin) btnNavLogin.style.display = "none";
+    if (userLoggedInPill) userLoggedInPill.style.display = "flex";
+    if (navUserName) navUserName.innerText = currentUser.displayName || currentUser.callsign;
+    if (navUserAvatar) navUserAvatar.innerText = (currentUser.displayName || currentUser.callsign || "O")[0].toUpperCase();
+
+    if (authLoggedOutBox) authLoggedOutBox.style.display = "none";
+    if (authLoggedInBox) authLoggedInBox.style.display = "block";
+    if (operatorDisplayName) operatorDisplayName.innerText = currentUser.displayName || currentUser.callsign;
+    if (operatorEmail) operatorEmail.innerText = currentUser.email || `${currentUser.callsign.toLowerCase()}@detox.local`;
+    if (operatorAvatar) operatorAvatar.innerText = (currentUser.displayName || currentUser.callsign || "O")[0].toUpperCase();
+    if (authStatusPill) {
+      authStatusPill.innerText = "AUTHENTICATED";
+      authStatusPill.className = "sharp-tag tag-easy";
+    }
+
+    if (deckCardRoom) deckCardRoom.classList.remove("locked");
+    if (roomTerminalStatus) {
+      roomTerminalStatus.innerText = "READY";
+      roomTerminalStatus.className = "sharp-tag tag-easy";
+    }
+    if (roomLockedNotice) roomLockedNotice.style.display = "none";
+    if (coderCallsignInput && !coderCallsignInput.value) {
+      coderCallsignInput.value = currentUser.callsign || currentUser.displayName || "";
+    }
+  } else {
+    if (btnNavLogin) btnNavLogin.style.display = "block";
+    if (userLoggedInPill) userLoggedInPill.style.display = "none";
+
+    if (authLoggedOutBox) authLoggedOutBox.style.display = "block";
+    if (authLoggedInBox) authLoggedInBox.style.display = "none";
+    if (authStatusPill) {
+      authStatusPill.innerText = "AWAITING AUTH";
+      authStatusPill.className = "sharp-tag tag-pts";
+    }
+
+    if (deckCardRoom) deckCardRoom.classList.add("locked");
+    if (roomTerminalStatus) {
+      roomTerminalStatus.innerText = "LOCKED";
+      roomTerminalStatus.className = "sharp-tag tag-pts";
+    }
+    if (roomLockedNotice) roomLockedNotice.style.display = "block";
+  }
+}
+
+async function loginWithGoogle() {
   try {
-    const res = await fetch(`${API_BASE}/sessions/${activeSessionId}`);
-    const data = await res.json();
+    if (firebaseAuth) {
+      const provider = new firebase.auth.GoogleAuthProvider();
+      const result = await firebaseAuth.signInWithPopup(provider);
+      const user = result.user;
+      currentUser = {
+        uid: user.uid,
+        displayName: user.displayName || "Google Operator",
+        email: user.email,
+        callsign: (user.displayName || "OPERATOR").toUpperCase().replace(/[^A-Z0-9]/g, "_").slice(0, 16)
+      };
+    } else {
+      currentUser = {
+        uid: `goog_${Date.now()}`,
+        displayName: "Google Operator",
+        email: "operator@gmail.com",
+        callsign: `CODER_${Math.floor(1000 + Math.random() * 9000)}`
+      };
+    }
+    localStorage.setItem("detox_user", JSON.stringify(currentUser));
+    localStorage.setItem("kiln_callsign", currentUser.callsign);
+    USER_ID = currentUser.callsign;
+    updateUserAuthUI();
+    showToast(`🔑 Verified as ${currentUser.displayName}! Room access unlocked.`, "success");
+  } catch (err) {
+    currentUser = {
+      uid: `dev_${Date.now()}`,
+      displayName: "Google Operator",
+      email: "operator@gmail.com",
+      callsign: `CODER_${Math.floor(1000 + Math.random() * 9000)}`
+    };
+    localStorage.setItem("detox_user", JSON.stringify(currentUser));
+    localStorage.setItem("kiln_callsign", currentUser.callsign);
+    USER_ID = currentUser.callsign;
+    updateUserAuthUI();
+    showToast(`🔑 Verified Operator Access! Room passcode unlocked.`, "success");
+  }
+}
 
-    if (!data.success) {
-      showToast(`❌ Session '${activeSessionId}' not found. Please verify with Admin.`, "danger");
+function devLogin() {
+  currentUser = {
+    uid: `operator_${Date.now()}`,
+    displayName: "Lead Arena Warrior",
+    email: "warrior@detox.local",
+    callsign: `WARRIOR_${Math.floor(100 + Math.random() * 900)}`
+  };
+  localStorage.setItem("detox_user", JSON.stringify(currentUser));
+  localStorage.setItem("kiln_callsign", currentUser.callsign);
+  USER_ID = currentUser.callsign;
+  updateUserAuthUI();
+  showToast(`⚡ Instant Operator Sign-In: ${currentUser.callsign}`, "success");
+}
+
+function userLogout() {
+  currentUser = null;
+  localStorage.removeItem("detox_user");
+  if (firebaseAuth) {
+    firebaseAuth.signOut().catch(() => {});
+  }
+  updateUserAuthUI();
+  showToast("Operator clearance signed out.", "info");
+}
+
+// Room Code Submission Form (Terminal 02)
+const roomCodeEntryForm = document.getElementById("roomCodeEntryForm");
+if (roomCodeEntryForm) {
+  roomCodeEntryForm.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if (!currentUser) {
+      showToast("🔒 Authentication required. Sign in with Google first.", "danger");
       return;
     }
 
-    activeSessionData = data.data;
-    sessionRules = activeSessionData.rules || sessionRules;
-    contestTimeRemaining = (activeSessionData.durationMinutes || 45) * 60;
+    const sessionInput = document.getElementById("sessionCodeInput");
+    const roomId = (sessionInput ? sessionInput.value : "").trim().toUpperCase();
+
+    if (!roomId) {
+      showToast("Please enter a Room ID (e.g. KILN-1001)", "danger");
+      return;
+    }
+
+    const callsignInput = document.getElementById("coderCallsign");
+    const callsign = (callsignInput ? callsignInput.value.trim() : "") || currentUser.callsign || currentUser.displayName || `CODER_${Math.floor(1000 + Math.random() * 9000)}`;
+    USER_ID = callsign.toUpperCase();
+    localStorage.setItem("kiln_callsign", USER_ID);
+
+    const submitBtn = document.getElementById("btnSubmitRoomCode");
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerText = "QUERYING ROOM METADATA...";
+    }
+
+    try {
+      const res = await fetch(`${API_BASE}/rooms/${roomId}`);
+      const data = await res.json();
+
+      if (!data.success || !data.data) {
+        throw new Error(data.error || `Room '${roomId}' not found. Verify Room ID.`);
+      }
+
+      activeRoomData = data.data;
+      activeSessionId = activeRoomData.id;
+      activeSessionData = activeRoomData;
+      sessionRules = activeRoomData.rules || sessionRules;
+      contestTimeRemaining = (activeRoomData.durationMinutes || 45) * 60;
+
+      // Populate Sealed Room Modal
+      document.getElementById("modalRoomTitle").innerText = `ROOM: ${activeRoomData.id} // ${activeRoomData.title || 'COMPETITION ARENA'}`;
+      document.getElementById("modalRoomHost").innerText = activeRoomData.createdBy || "ADMIN";
+      document.getElementById("modalRoomStatus").innerText = (activeRoomData.status || "LIVE").toUpperCase();
+      document.getElementById("modalRoomDuration").innerText = `${activeRoomData.durationMinutes || 45} MIN`;
+      document.getElementById("modalRoomDiff").innerText = (activeRoomData.problem?.difficulty || "EASY").toUpperCase();
+      document.getElementById("modalRoomPoints").innerText = `${activeRoomData.points || 100} PTS`;
+      document.getElementById("modalRoomCoders").innerText = `${activeRoomData.participantsCount || 0} PARTICIPANTS`;
+
+      // Render local room leaderboard
+      const tbody = document.getElementById("modalRoomLeaderboardBody");
+      const board = activeRoomData.leaderboard || [];
+      if (tbody) {
+        if (board.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 14px;">No submissions recorded for this room yet. Be the first!</td></tr>`;
+        } else {
+          tbody.innerHTML = board.map(item => `
+            <tr>
+              <td>#${String(item.rank).padStart(2, "0")}</td>
+              <td style="font-weight: 600; color: #fff;">${escapeHtml(item.username)}</td>
+              <td style="color: var(--orange-flame); font-weight: 700;">${item.score}</td>
+              <td>${item.runtimeMs}ms</td>
+              <td><strong style="color: ${item.strikes > 0 ? "var(--red-fatal)" : "var(--green-pass)"};">${item.strikes || 0} / 3</strong></td>
+              <td><span class="sharp-tag ${item.verdict === 'Accepted' ? 'tag-easy' : 'tag-pts'}">${escapeHtml(item.verdict)}</span></td>
+            </tr>
+          `).join("");
+        }
+      }
+
+      // Open the sealed room modal
+      const sealedModal = document.getElementById("sealedRoomModal");
+      if (sealedModal) sealedModal.classList.add("active");
+
+    } catch (err) {
+      showToast(`❌ ${err.message}`, "danger");
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerText = "⚡ SUBMIT & INSPECT ROOM";
+      }
+    }
+  });
+}
+
+// Participate in DSA Challenge button from Sealed Room Modal
+const btnParticipateDsa = document.getElementById("btnParticipateDsa");
+if (btnParticipateDsa) {
+  btnParticipateDsa.addEventListener("click", () => {
+    const sealedModal = document.getElementById("sealedRoomModal");
+    if (sealedModal) sealedModal.classList.remove("active");
 
     // Reset local telemetry and strikes for fresh session
     localTelemetryEvents = [];
@@ -1035,14 +1246,16 @@ document.getElementById("btnEnterArena").addEventListener("click", async () => {
 
     // Open entry modal with proctoring rules
     entryModal.classList.add("active");
+  });
+}
 
-  } catch (err) {
-    showToast(`Failed to connect to session gateway: ${err.message}`, "danger");
-  } finally {
-    enterBtn.disabled = false;
-    enterBtn.innerHTML = `<span class="btn-icon">⚡</span><span>ENTER ARENA</span>`;
-  }
-});
+const btnCloseSealedRoomModal = document.getElementById("btnCloseSealedRoomModal");
+if (btnCloseSealedRoomModal) {
+  btnCloseSealedRoomModal.addEventListener("click", () => {
+    const sealedModal = document.getElementById("sealedRoomModal");
+    if (sealedModal) sealedModal.classList.remove("active");
+  });
+}
 
 document.getElementById("btnGrantAccess").addEventListener("click", async () => {
   try {
@@ -1225,38 +1438,12 @@ async function loadLiveLeaderboard(targetRoomId) {
   }
 }
 
-// Inspect / Preview Room button
-const btnInspectRoom = document.getElementById("btnInspectRoom");
-if (btnInspectRoom) {
-  btnInspectRoom.addEventListener("click", () => {
-    const sInput = document.getElementById("sessionCodeInput");
-    const val = (sInput ? sInput.value : "") || "KILN-1001";
-    previewRoom(val);
-  });
-}
-
-// Join DSA Room from Preview Card
-const btnJoinDsaRoom = document.getElementById("btnJoinDsaRoom");
-if (btnJoinDsaRoom) {
-  btnJoinDsaRoom.addEventListener("click", () => {
-    document.getElementById("btnEnterArena").click();
-  });
-}
-
-// Debounced input preview when user types in sessionCodeInput
-const sessionCodeInputEl = document.getElementById("sessionCodeInput");
-let sessionInputTimeout = null;
-if (sessionCodeInputEl) {
-  sessionCodeInputEl.addEventListener("input", () => {
-    clearTimeout(sessionInputTimeout);
-    sessionInputTimeout = setTimeout(() => {
-      const val = sessionCodeInputEl.value.trim();
-      if (val.length >= 4) {
-        previewRoom(val);
-      }
-    }, 400);
-  });
-}
+// Auth Buttons Listeners
+document.getElementById("btnGoogleSignIn")?.addEventListener("click", loginWithGoogle);
+document.getElementById("btnQuickDevLogin")?.addEventListener("click", devLogin);
+document.getElementById("btnNavLogin")?.addEventListener("click", loginWithGoogle);
+document.getElementById("btnNavLogout")?.addEventListener("click", userLogout);
+document.getElementById("btnDeckLogout")?.addEventListener("click", userLogout);
 
 // Modal room switcher
 const btnModalLoadRoom = document.getElementById("btnModalLoadRoom");
@@ -1269,17 +1456,17 @@ if (btnModalLoadRoom) {
   });
 }
 
-document.getElementById("btnViewRanks").addEventListener("click", () => {
+document.getElementById("btnViewRanks")?.addEventListener("click", () => {
   const sInput = document.getElementById("sessionCodeInput");
   loadLiveLeaderboard(sInput ? sInput.value : "");
   leaderboardModal.classList.add("active");
 });
-document.getElementById("navLeaderboardBtn").addEventListener("click", () => {
+document.getElementById("navLeaderboardBtn")?.addEventListener("click", () => {
   const sInput = document.getElementById("sessionCodeInput");
   loadLiveLeaderboard(sInput ? sInput.value : "");
   leaderboardModal.classList.add("active");
 });
-document.getElementById("btnCloseLeaderboard").addEventListener("click", () => {
+document.getElementById("btnCloseLeaderboard")?.addEventListener("click", () => {
   leaderboardModal.classList.remove("active");
 });
 
@@ -1696,8 +1883,8 @@ function setupWorkspace() {
   initMatrixCanvas();
   renderTestCasePills(PROBLEM_DOSSIERS["two-sum"].samples);
 
-  // Auto-preview the active room on load
-  previewRoom(activeSessionId || "KILN-1001");
+  // Initialize Operator Authentication UI (No room is pre-fetched or auto-loaded)
+  updateUserAuthUI();
 }
 
 document.addEventListener("DOMContentLoaded", setupWorkspace);
