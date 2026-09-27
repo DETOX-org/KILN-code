@@ -4,7 +4,9 @@
  * Strict Zero Border-Radius // High-Contrast Ember Orange // Technical HUD
  */
 
-const API_BASE = window.location.port === "3000" ? `${window.location.origin}/api` : "http://127.0.0.1:3000/api";
+const API_BASE = (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+  ? "http://127.0.0.1:3000/api"
+  : `${window.location.origin}/api`;
 const CHALLENGE_ID = "c0000000-0000-0000-0000-000000000014";
 let currentProblemSlug = "two-sum";
 let USER_ID = `CODER_${Math.floor(1000 + Math.random() * 9000)}`;
