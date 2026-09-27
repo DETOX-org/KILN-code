@@ -2,6 +2,12 @@ import fs from "node:fs";
 import path from "node:path";
 import { ChallengeSession, FinalSubmissionAudit } from "../stores/session.store.js";
 
+try {
+  process.loadEnvFile?.();
+} catch {
+  // Ignore if .env is missing
+}
+
 export interface FirebaseConfig {
   apiKey?: string;
   projectId?: string;

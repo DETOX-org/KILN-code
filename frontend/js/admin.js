@@ -235,8 +235,7 @@ if (btnCopySessionCode) {
 // Copy Direct Link Button
 if (btnCopyDirectLink) {
   btnCopyDirectLink.addEventListener("click", () => {
-    if (!currentGeneratedSessionId) return;
-    const directUrl = `${window.location.origin}/index.html?session=${currentGeneratedSessionId}`;
+    const directUrl = new URL(`index.html?session=${currentGeneratedSessionId}`, window.location.href).href;
     navigator.clipboard.writeText(directUrl).then(() => {
       showToast(`🔗 Copied direct invite URL to clipboard`, "info");
     }).catch(() => {
