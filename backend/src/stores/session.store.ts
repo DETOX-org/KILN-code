@@ -205,6 +205,103 @@ export class SessionStore {
     session.participantsCount = new Set(session.submissions.map(s => s.userId)).size;
     return audit;
   }
+
+  /**
+   * Get room-specific leaderboard for a session
+   * Aggregates best submission per user, sorted by score desc, penalty asc
+   */
+  public getLeaderboard(sessionId: string): {
+    rank: number;
+    userId: string;
+    username: string;
+    score: number;
+    verdict: string;
+    runtimeMs: number;
+    memoryKb: number;
+    strikes: number;
+    submittedAt: string;
+    language: string;
+  }[] {
+    const session = this.getSession(sessionId);
+    if (!session) return [];
+
+    // Aggregate best submission per user
+    const userBest = new Map<string, FinalSubmissionAudit>();
+    for (const sub of session.submissions) {
+      const existing = userBest.get(sub.userId);
+      if (!existing || sub.score > existing.score) {
+        userBest.set(sub.userId, sub);
+      }
+    }
+
+    // Sort by score desc, then runtime asc
+    const sorted = Array.from(userBest.values())
+      .sort((a, b) => b.score - a.score || a.runtimeMs - b.runtimeMs);
+
+    return sorted.map((sub, idx) => ({
+      rank: idx + 1,
+      userId: sub.userId,
+      username: sub.username,
+      score: sub.score,
+      verdict: sub.verdict,
+      runtimeMs: sub.runtimeMs,
+      memoryKb: sub.memoryKb,
+      strikes: sub.strikes,
+      submittedAt: sub.submittedAt,
+      language: sub.language
+    }));
+  }
+
+  /**
+   * Get all sessions created by a specific admin
+   */
+  public getSessionsByAdmin(adminId: string): ChallengeSession[] {
+    return Array.from(this.sessions.values())
+      .filter(s => s.createdBy === adminId)
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+  }
+
+  /**
+   * Get room metadata for public viewing (without hidden test cases)
+   */
+  public getRoomPublicView(sessionId: string): {
+    id: string;
+    title: string;
+    description: string;
+    durationMinutes: number;
+    points: number;
+    status: string;
+    rules: SessionRules;
+    problem: { title: string; statement: string; difficulty: string; points: number };
+    createdAt: string;
+    createdBy: string;
+    participantsCount: number;
+    leaderboard: ReturnType<SessionStore["getLeaderboard"]>;
+  } | null {
+    const session = this.getSession(sessionId);
+    if (!session) return null;
+
+    return {
+      id: session.id,
+      title: session.title,
+      description: session.description,
+      durationMinutes: session.durationMinutes,
+      points: session.points,
+      status: session.status,
+      rules: session.rules,
+      problem: {
+        title: session.problem.title,
+        statement: session.problem.statement,
+        difficulty: session.problem.difficulty,
+        points: session.problem.points
+      },
+      createdAt: session.createdAt,
+      createdBy: session.createdBy,
+      participantsCount: session.participantsCount,
+      leaderboard: this.getLeaderboard(sessionId)
+    };
+  }
 }
 
 export const sessionStore = new SessionStore();
+

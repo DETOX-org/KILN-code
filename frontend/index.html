@@ -134,8 +134,63 @@
             >
           </div>
           <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 4px; display: flex; justify-content: space-between;">
-            <span>Custom challenge &amp; rules load dynamically from Session ID</span>
-            <a href="admin.html" style="color: var(--orange-flame); text-decoration: none;">Admin Configurator &gt;</a>
+            <span>Metadata &amp; leaderboard load via single read</span>
+            <button type="button" id="btnInspectRoom" class="btn-link" style="color: var(--orange-flame); cursor: pointer; background: none; border: none; padding: 0;">🔍 Preview Room &amp; Ranks</button>
+          </div>
+
+          <!-- Room Preview Card with Local Leaderboard -->
+          <div class="room-preview-box" id="roomPreviewCard" style="display: none;">
+            <div class="room-preview-header">
+              <div>
+                <div class="room-preview-title" id="roomPreviewTitle">ROOM TITLE</div>
+                <div class="room-preview-host" id="roomPreviewHost">HOST: ADMIN-CORE</div>
+              </div>
+              <span class="sharp-tag tag-easy" id="roomPreviewStatus">LIVE</span>
+            </div>
+
+            <div class="room-preview-grid">
+              <div>
+                <span class="room-preview-stat-label">PROBLEM:</span>
+                <span class="room-preview-stat-val" id="roomPreviewProblem">Two Sum</span>
+              </div>
+              <div>
+                <span class="room-preview-stat-label">DIFFICULTY:</span>
+                <span class="room-preview-stat-val" id="roomPreviewDiff">EASY</span>
+              </div>
+              <div>
+                <span class="room-preview-stat-label">TIME LIMIT:</span>
+                <span class="room-preview-stat-val" id="roomPreviewDuration">45 MIN</span>
+              </div>
+              <div>
+                <span class="room-preview-stat-label">PLAYERS:</span>
+                <span class="room-preview-stat-val" id="roomPreviewPlayers">0</span>
+              </div>
+            </div>
+
+            <div style="font-size: 0.72rem; color: var(--text-dim); margin-bottom: 6px; font-weight: 600;">
+              ROOM-SPECIFIC LEADERBOARD (LOADED LOCALLY):
+            </div>
+            <div class="room-preview-table-container">
+              <table class="sharp-table" style="font-size: 0.75rem;">
+                <thead>
+                  <tr>
+                    <th>#</th>
+                    <th>WARRIOR</th>
+                    <th>SCORE</th>
+                    <th>TIME</th>
+                    <th>STATUS</th>
+                  </tr>
+                </thead>
+                <tbody id="roomPreviewLeaderboardBody">
+                  <tr><td colspan="5" style="text-align: center; color: var(--text-dim);">No submissions yet. Be first!</td></tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Join DSA Room Action Button -->
+            <button type="button" class="btn btn-sharp btn-primary btn-join-room" id="btnJoinDsaRoom">
+              ⚡ JOIN THIS DSA ROOM
+            </button>
           </div>
         </div>
 
@@ -533,8 +588,16 @@
       <span class="corner-bracket bottom-left"></span>
       <span class="corner-bracket bottom-right"></span>
 
-      <div class="modal-badge-info">LIVE ARENA STANDINGS</div>
-      <h2 class="modal-heading">COMMUNITY BATTLEGROUND LEADERBOARD</h2>
+      <div class="modal-badge-info">ROOM-SPECIFIC STANDINGS</div>
+      <h2 class="modal-heading" id="leaderboardModalTitle">ARENA ROOM LEADERBOARD</h2>
+
+      <!-- Room Selector inside modal -->
+      <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 16px;">
+        <span style="font-size: 0.78rem; color: var(--text-dim); font-family: var(--font-display);">SWITCH ROOM:</span>
+        <input type="text" id="modalRoomInput" class="input-sharp" placeholder="e.g. KILN-1001" style="max-width: 180px; height: 32px; padding: 4px 8px; font-size: 0.8rem;" value="KILN-1001">
+        <button type="button" class="btn btn-sharp btn-secondary" id="btnModalLoadRoom" style="padding: 4px 12px; font-size: 0.75rem;">LOAD ROOM</button>
+        <span id="modalRoomHostTag" style="font-size: 0.75rem; color: var(--orange-flame); font-family: var(--font-code); margin-left: auto;"></span>
+      </div>
 
       <div class="leaderboard-table-frame">
         <table class="sharp-table">
@@ -542,9 +605,9 @@
             <tr>
               <th>RANK</th>
               <th>CALLSIGN</th>
-              <th>SOLVED</th>
               <th>SCORE</th>
-              <th>PENALTY</th>
+              <th>RUNTIME</th>
+              <th>STRIKES</th>
               <th>STATUS</th>
             </tr>
           </thead>

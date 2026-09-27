@@ -1107,55 +1107,176 @@ document.getElementById("btnFullscreenToggle").addEventListener("click", async (
   }
 });
 
-/* ================== LEADERBOARD MODAL ================== */
-async function loadLiveLeaderboard() {
-  const tbody = document.getElementById("leaderboardBody");
-  tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">FETCHING LIVE STANDINGS...</td></tr>`;
+/* ================== ROOM PREVIEW & LOCAL LEADERBOARD ================== */
+async function previewRoom(roomId) {
+  const roomCard = document.getElementById("roomPreviewCard");
+  const rid = (roomId || "").trim().toUpperCase();
+  if (!rid) return;
 
   try {
-    const res = await fetch(`${API_BASE}/contests/${CHALLENGE_ID}/standings`);
+    const res = await fetch(`${API_BASE}/rooms/${rid}`);
     const data = await res.json();
-    const standings = data.standings || [];
 
-    if (standings.length === 0) {
-      tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim);">NO STANDINGS REGISTERED YET</td></tr>`;
-      return;
+    if (!data.success || !data.data) {
+      if (roomCard) roomCard.style.display = "none";
+      return null;
     }
 
-    tbody.innerHTML = standings.map((item, idx) => {
-      const isGold = idx === 0;
-      const isSilver = idx === 1;
-      const isBronze = idx === 2;
-      const rankClass = isGold ? "rank-gold" : isSilver ? "rank-silver" : isBronze ? "rank-bronze" : "";
-      const isCurrentPlayer = item.username === USER_ID || item.user_id === USER_ID;
-      const highlightStyle = isCurrentPlayer ? "background: rgba(255, 77, 0, 0.15); font-weight: 700;" : "";
+    const room = data.data;
 
-      return `
-        <tr class="${rankClass}" style="${highlightStyle}">
-          <td>#${String(item.rank).padStart(2, "0")}</td>
-          <td class="coder-name">${item.display_name || item.username} ${isCurrentPlayer ? "(YOU)" : ""}</td>
-          <td>${item.total_score >= 100 ? "1 / 1" : "0 / 1"}</td>
-          <td class="score-val">${item.total_score}</td>
-          <td>${item.penalty}m 00s</td>
-          <td>
-            <span class="sharp-tag ${item.is_verified ? "tag-easy" : "tag-pts"}">
-              ${item.is_verified ? "ACCEPTED ✓" : "SUBMITTED"}
-            </span>
-          </td>
-        </tr>
-      `;
-    }).join("");
+    if (roomCard) {
+      document.getElementById("roomPreviewTitle").innerText = room.title || `Room ${room.id}`;
+      document.getElementById("roomPreviewHost").innerText = `HOST // CREATED BY: ${room.createdBy || "ADMIN"}`;
+      document.getElementById("roomPreviewStatus").innerText = (room.status || "LIVE").toUpperCase();
+      document.getElementById("roomPreviewProblem").innerText = room.problem?.title || "DSA Challenge";
+      document.getElementById("roomPreviewDiff").innerText = (room.problem?.difficulty || "EASY").toUpperCase();
+      document.getElementById("roomPreviewDuration").innerText = `${room.durationMinutes || 45} MIN`;
+      document.getElementById("roomPreviewPlayers").innerText = `${room.participantsCount || 0} CODERS`;
+
+      // Render local room leaderboard
+      const tbody = document.getElementById("roomPreviewLeaderboardBody");
+      const board = room.leaderboard || [];
+
+      if (board.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align: center; color: var(--text-dim); padding: 12px;">No submissions yet. Click below to join and set the high score!</td></tr>`;
+      } else {
+        tbody.innerHTML = board.map(item => `
+          <tr>
+            <td>#${String(item.rank).padStart(2, "0")}</td>
+            <td style="font-weight: 600; color: #fff;">${escapeHtml(item.username)}</td>
+            <td style="color: var(--orange-flame); font-weight: 700;">${item.score}</td>
+            <td>${item.runtimeMs}ms</td>
+            <td><span class="sharp-tag ${item.verdict === "Accepted" ? "tag-easy" : "tag-pts"}">${escapeHtml(item.verdict)}</span></td>
+          </tr>
+        `).join("");
+      }
+
+      roomCard.style.display = "block";
+      roomCard.classList.add("active-preview");
+    }
+
+    return room;
   } catch (err) {
-    tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--red-fatal);">FAILED TO LOAD LEADERBOARD FROM SERVER</td></tr>`;
+    if (roomCard) roomCard.style.display = "none";
+    return null;
   }
 }
 
+async function loadLiveLeaderboard(targetRoomId) {
+  const sessionInput = document.getElementById("sessionCodeInput");
+  const roomId = (targetRoomId || (sessionInput ? sessionInput.value : "") || activeSessionId || "KILN-1001").trim().toUpperCase();
+
+  const tbody = document.getElementById("leaderboardBody");
+  const modalTitle = document.getElementById("leaderboardModalTitle");
+  const hostTag = document.getElementById("modalRoomHostTag");
+  const modalInput = document.getElementById("modalRoomInput");
+
+  if (modalInput) modalInput.value = roomId;
+  if (modalTitle) modalTitle.innerText = `ROOM LEADERBOARD: ${roomId}`;
+  if (hostTag) hostTag.innerText = "QUERYING...";
+  if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">FETCHING ROOM STANDINGS...</td></tr>`;
+
+  try {
+    const res = await fetch(`${API_BASE}/rooms/${roomId}`);
+    const data = await res.json();
+
+    if (!data.success || !data.data) {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--red-fatal); padding: 18px;">ROOM '${roomId}' NOT FOUND</td></tr>`;
+      if (hostTag) hostTag.innerText = "";
+      return;
+    }
+
+    const room = data.data;
+    if (hostTag) hostTag.innerText = `HOST: ${room.createdBy || "ADMIN"}`;
+    const standings = room.leaderboard || [];
+
+    if (standings.length === 0) {
+      if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 24px;">NO SUBMISSIONS FOR ROOM '${roomId}' YET</td></tr>`;
+      return;
+    }
+
+    if (tbody) {
+      tbody.innerHTML = standings.map((item, idx) => {
+        const isGold = idx === 0;
+        const isSilver = idx === 1;
+        const isBronze = idx === 2;
+        const rankClass = isGold ? "rank-gold" : isSilver ? "rank-silver" : isBronze ? "rank-bronze" : "";
+        const isCurrentPlayer = item.username === USER_ID || item.userId === USER_ID;
+        const highlightStyle = isCurrentPlayer ? "background: rgba(255, 77, 0, 0.15); font-weight: 700;" : "";
+
+        return `
+          <tr class="${rankClass}" style="${highlightStyle}">
+            <td>#${String(item.rank).padStart(2, "0")}</td>
+            <td class="coder-name">${escapeHtml(item.username)} ${isCurrentPlayer ? "(YOU)" : ""}</td>
+            <td class="score-val">${item.score}</td>
+            <td>${item.runtimeMs}ms</td>
+            <td><strong style="color: ${item.strikes > 0 ? "var(--red-fatal)" : "var(--green-pass)"};">${item.strikes || 0} / 3</strong></td>
+            <td>
+              <span class="sharp-tag ${item.verdict === "Accepted" ? "tag-easy" : "tag-pts"}">
+                ${escapeHtml(item.verdict)}
+              </span>
+            </td>
+          </tr>
+        `;
+      }).join("");
+    }
+  } catch (err) {
+    if (tbody) tbody.innerHTML = `<tr><td colspan="6" style="text-align: center; color: var(--red-fatal);">FAILED TO LOAD LEADERBOARD FOR ROOM ${roomId}</td></tr>`;
+  }
+}
+
+// Inspect / Preview Room button
+const btnInspectRoom = document.getElementById("btnInspectRoom");
+if (btnInspectRoom) {
+  btnInspectRoom.addEventListener("click", () => {
+    const sInput = document.getElementById("sessionCodeInput");
+    const val = (sInput ? sInput.value : "") || "KILN-1001";
+    previewRoom(val);
+  });
+}
+
+// Join DSA Room from Preview Card
+const btnJoinDsaRoom = document.getElementById("btnJoinDsaRoom");
+if (btnJoinDsaRoom) {
+  btnJoinDsaRoom.addEventListener("click", () => {
+    document.getElementById("btnEnterArena").click();
+  });
+}
+
+// Debounced input preview when user types in sessionCodeInput
+const sessionCodeInputEl = document.getElementById("sessionCodeInput");
+let sessionInputTimeout = null;
+if (sessionCodeInputEl) {
+  sessionCodeInputEl.addEventListener("input", () => {
+    clearTimeout(sessionInputTimeout);
+    sessionInputTimeout = setTimeout(() => {
+      const val = sessionCodeInputEl.value.trim();
+      if (val.length >= 4) {
+        previewRoom(val);
+      }
+    }, 400);
+  });
+}
+
+// Modal room switcher
+const btnModalLoadRoom = document.getElementById("btnModalLoadRoom");
+if (btnModalLoadRoom) {
+  btnModalLoadRoom.addEventListener("click", () => {
+    const mInput = document.getElementById("modalRoomInput");
+    if (mInput && mInput.value.trim()) {
+      loadLiveLeaderboard(mInput.value.trim());
+    }
+  });
+}
+
 document.getElementById("btnViewRanks").addEventListener("click", () => {
-  loadLiveLeaderboard();
+  const sInput = document.getElementById("sessionCodeInput");
+  loadLiveLeaderboard(sInput ? sInput.value : "");
   leaderboardModal.classList.add("active");
 });
 document.getElementById("navLeaderboardBtn").addEventListener("click", () => {
-  loadLiveLeaderboard();
+  const sInput = document.getElementById("sessionCodeInput");
+  loadLiveLeaderboard(sInput ? sInput.value : "");
   leaderboardModal.classList.add("active");
 });
 document.getElementById("btnCloseLeaderboard").addEventListener("click", () => {
@@ -1574,6 +1695,9 @@ function setupWorkspace() {
   initConsoleTabs();
   initMatrixCanvas();
   renderTestCasePills(PROBLEM_DOSSIERS["two-sum"].samples);
+
+  // Auto-preview the active room on load
+  previewRoom(activeSessionId || "KILN-1001");
 }
 
 document.addEventListener("DOMContentLoaded", setupWorkspace);

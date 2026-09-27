@@ -9,8 +9,9 @@ const router = Router();
  * Rating history for a specific user
  */
 router.get("/user/:userId", (req: Request, res: Response) => {
-  const history = leaderboardStore.getRatingHistory(req.params.userId);
-  const profile = leaderboardStore.getUserProfile(req.params.userId);
+  const userId = req.params.userId as string;
+  const history = leaderboardStore.getRatingHistory(userId);
+  const profile = leaderboardStore.getUserProfile(userId);
 
   if (!profile) {
     res.status(404).json({ error: "User not found" });

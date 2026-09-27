@@ -1,5 +1,6 @@
 import { Router, Request, Response } from "express";
 import { sessionStore, FinalSubmissionAudit } from "../stores/session.store.js";
+import { adminStore } from "../stores/admin.store.js";
 import { databaseService } from "../services/database.service.js";
 import { compilerService } from "../services/compiler.service.js";
 import { store } from "../services/store.service.js";
@@ -61,6 +62,36 @@ router.get("/:sessionId", (req: Request, res: Response) => {
         starterTemplates: session.problem.starterTemplates
       },
       createdAt: session.createdAt
+    }
+  });
+});
+
+/**
+ * GET /api/sessions/:sessionId/leaderboard
+ * Returns room-specific leaderboard for this session
+ */
+router.get("/:sessionId/leaderboard", (req: Request, res: Response) => {
+  const sessionId = Array.isArray(req.params.sessionId) ? req.params.sessionId[0] : req.params.sessionId;
+  const session = sessionStore.getSession(sessionId);
+
+  if (!session) {
+    res.status(404).json({
+      success: false,
+      error: `Challenge Session '${sessionId}' was not found.`
+    });
+    return;
+  }
+
+  const leaderboard = sessionStore.getLeaderboard(sessionId);
+
+  res.json({
+    success: true,
+    data: {
+      roomId: session.id,
+      title: session.title,
+      status: session.status,
+      participantsCount: session.participantsCount,
+      leaderboard
     }
   });
 });
@@ -216,6 +247,8 @@ router.post("/admin/create", async (req: Request, res: Response) => {
       return;
     }
 
+    const adminId = (req.headers["x-admin-id"] as string) || req.body.adminId || createdBy || "ADMIN-CORE";
+
     // Create session in local store and generate unique KILN-XXXX Session Code
     const session = sessionStore.createSession({
       title,
@@ -224,8 +257,11 @@ router.post("/admin/create", async (req: Request, res: Response) => {
       points: Number(points) || Number(problem.points) || 100,
       rules,
       problem,
-      createdBy: createdBy || "ADMIN_ORGANIZER"
+      createdBy: adminId
     });
+
+    // Link session to creating admin
+    adminStore.addRoom(adminId, session.id);
 
     // Single Atomic Write to Database (Firebase + Local Persistent Engine)
     const dbResult = await databaseService.writeSession(session);

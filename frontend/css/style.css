@@ -1427,3 +1427,189 @@ code {
   margin-bottom: 2px;
 }
 
+/* ========================================================================= */
+/* ROOM PREVIEW & LOCAL LEADERBOARD CARD                                     */
+/* ========================================================================= */
+.room-preview-box {
+  background: var(--bg-card);
+  border: 1px solid var(--border-strong);
+  padding: 16px;
+  margin-top: 14px;
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.room-preview-box.active-preview {
+  border-color: var(--orange-flame);
+  box-shadow: 0 0 15px var(--orange-muted);
+}
+
+.room-preview-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 12px;
+  border-bottom: 1px solid var(--border-subtle);
+  padding-bottom: 10px;
+}
+
+.room-preview-title {
+  font-family: var(--font-display);
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: #fff;
+  letter-spacing: 0.5px;
+}
+
+.room-preview-host {
+  font-size: 0.75rem;
+  color: var(--text-dim);
+  font-family: var(--font-code);
+  margin-top: 2px;
+}
+
+.room-preview-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 12px;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 8px 10px;
+  font-size: 0.76rem;
+}
+
+.room-preview-stat-label {
+  color: var(--text-dim);
+  font-size: 0.68rem;
+  display: block;
+}
+
+.room-preview-stat-val {
+  font-weight: 600;
+  color: var(--text-main);
+  font-family: var(--font-code);
+}
+
+.room-preview-table-container {
+  max-height: 180px;
+  overflow-y: auto;
+  margin-bottom: 12px;
+  border: 1px solid var(--border-subtle);
+}
+
+.btn-join-room {
+  width: 100%;
+  padding: 10px;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+}
+
+/* ========================================================================= */
+/* ADMIN AUTHENTICATION GATE & DASHBOARD                                     */
+/* ========================================================================= */
+.admin-auth-view {
+  max-width: 900px;
+  margin: 40px auto;
+  padding: 0 20px;
+}
+
+.admin-auth-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-top: 20px;
+}
+
+@media (max-width: 768px) {
+  .admin-auth-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.admin-nav-tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--border-strong);
+  padding-bottom: 12px;
+}
+
+.admin-tab-btn {
+  background: var(--bg-card);
+  color: var(--text-muted);
+  border: 1px solid var(--border-subtle);
+  font-family: var(--font-display);
+  font-size: 0.85rem;
+  font-weight: 700;
+  padding: 8px 18px;
+  cursor: pointer;
+  letter-spacing: 0.8px;
+  transition: all 0.15s ease;
+}
+
+.admin-tab-btn:hover {
+  border-color: var(--orange-flame);
+  color: #fff;
+}
+
+.admin-tab-btn.active {
+  background: var(--orange-flame);
+  color: #fff;
+  border-color: var(--orange-flame);
+  box-shadow: 0 0 12px var(--orange-glow);
+}
+
+.admin-metric-ribbon {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+@media (max-width: 900px) {
+  .admin-metric-ribbon {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+
+.admin-metric-box {
+  background: var(--bg-surface);
+  border: 1px solid var(--border-subtle);
+  padding: 16px 20px;
+  position: relative;
+}
+
+.admin-metric-box:hover {
+  border-color: var(--border-strong);
+}
+
+.admin-metric-val {
+  font-family: var(--font-display);
+  font-size: 1.8rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.admin-metric-lbl {
+  font-size: 0.72rem;
+  color: var(--text-dim);
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  margin-top: 4px;
+}
+
+.admin-key-badge {
+  background: rgba(255, 77, 0, 0.12);
+  border: 1px dashed var(--orange-flame);
+  padding: 10px 14px;
+  font-family: var(--font-code);
+  font-size: 0.85rem;
+  color: var(--orange-flame);
+  margin-bottom: 14px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+

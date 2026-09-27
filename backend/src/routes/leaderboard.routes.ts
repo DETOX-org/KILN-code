@@ -52,7 +52,8 @@ router.get("/stats", (_req: Request, res: Response) => {
  * Full profile for a specific user
  */
 router.get("/user/:userId", (req: Request, res: Response) => {
-  const profile = leaderboardStore.getUserProfile(req.params.userId);
+  const userId = req.params.userId as string;
+  const profile = leaderboardStore.getUserProfile(userId);
   if (!profile) {
     res.status(404).json({ error: "User not found" });
     return;
@@ -68,7 +69,8 @@ router.get("/user/:userId", (req: Request, res: Response) => {
  * Achievements for a specific user
  */
 router.get("/user/:userId/achievements", (req: Request, res: Response) => {
-  const achievements = leaderboardStore.getAchievements(req.params.userId);
+  const userId = req.params.userId as string;
+  const achievements = leaderboardStore.getAchievements(userId);
   res.json({
     success: true,
     data: achievements
