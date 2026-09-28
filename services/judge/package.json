@@ -7,7 +7,12 @@
     "test": "tests"
   },
   "scripts": {
-      "test": "node --test --test-concurrency=1 tests/judge-regression.test.js tests/worker-regression.test.js"
+    "test": "node --test --test-concurrency=1 tests/judge-regression.test.js tests/worker-regression.test.js",
+    "test:judge0": "node --test --test-concurrency=1 tests/judge0-status-mapping.test.js tests/judge0-adapter.test.js tests/judge0-run-vs-submit.test.js tests/judge0-limits-and-cleanup.test.js tests/engine-parity.test.js",
+    "test:parity": "node --test tests/engine-parity.test.js",
+    "test:sql": "node --test tests/judge0-sql.test.js",
+    "test:live": "node --test tests/judge0-live-execution.test.js",
+    "test:all": "node --test --test-concurrency=1 tests/judge0-status-mapping.test.js tests/judge0-adapter.test.js tests/judge0-run-vs-submit.test.js tests/judge0-limits-and-cleanup.test.js tests/engine-parity.test.js tests/judge0-sql.test.js tests/judge0-live-execution.test.js"
   },
   "keywords": [],
   "author": "",
