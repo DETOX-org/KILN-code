@@ -3,34 +3,91 @@
     build:
       context: .
       dockerfile: Dockerfile
+
     ports:
       - "2000:3000"
+
     environment:
       REDIS_URL: redis://redis:6379
+      DATABASE_URL: postgresql://kiln:kiln_dev_password@db:5432/kiln
+
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_started
 
   judge:
     build:
       context: .
       dockerfile: infrastructure/docker/judge/Dockerfile
+
     expose:
       - "3001"
+
     environment:
       REDIS_URL: redis://redis:6379
 
+    depends_on:
+      redis:
+        condition: service_started
+
   piston:
     image: ghcr.io/engineer-man/piston@sha256:2f66b7456189c4d713aa986d98eccd0b6ee16d26c7ec5f21b30e942756fd127a
+
     privileged: true
+
     environment:
       PISTON_LIMIT_OVERRIDES: '{"kotlin":{"compile_cpu_time":30000}}'
+
     volumes:
       - piston_data:/piston
+
     ports:
       - "2001:2000"
 
   redis:
     image: redis:7-alpine
+
     ports:
       - "6379:6379"
 
+    volumes:
+      - redis_data:/data
+
+    command: redis-server --appendonly yes
+
+    healthcheck:
+      test: [ "CMD", "redis-cli", "ping" ]
+      interval: 5s
+      timeout: 3s
+      retries: 5
+      start_period: 5s
+
+  db:
+    image: postgres:18-alpine
+
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_DB: kiln
+      POSTGRES_USER: kiln
+      POSTGRES_PASSWORD: kiln_dev_password
+
+    ports:
+      - "5433:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql
+
+    healthcheck:
+      test: [ "CMD-SHELL", "pg_isready -U kiln -d kiln" ]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+
 volumes:
   piston_data:
+  postgres_data:
+  redis_data:

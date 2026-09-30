@@ -5,9 +5,11 @@ import {
   acknowledgeJudgeJob,
   recoverProcessingJobs
 } from "./redis-queue.js";
-import { createJudgeEngine } from "../engines/index.js";
 
-const judgeEngine = createJudgeEngine();
+import {
+  createJudgeEngine,
+  checkJudgeEngineHealth,
+} from "../engines/index.js";
 
 const redisUrl =
   process.env.REDIS_URL ?? "redis://redis:6379";
@@ -102,6 +104,16 @@ function validateJob(job: {
 }
 
 async function startWorker(): Promise<void> {
+  // Check the execution engine before creating it.
+  const healthy = await checkJudgeEngineHealth();
+
+  if (!healthy) {
+    throw new Error("No healthy execution engine is available.");
+  }
+
+  // Create the engine only after the health check succeeds.
+  const judgeEngine = createJudgeEngine();
+
   console.log("Judge worker started");
 
   await recoverProcessingJobs();
@@ -266,12 +278,12 @@ async function startWorker(): Promise<void> {
 
         const finalStatus =
           results.length === job.tests.length &&
-          results.every(
-            (result) => result.status === "Accepted"
-          )
+            results.every(
+              (result) => result.status === "Accepted"
+            )
             ? "Accepted"
             : results[results.length - 1]?.status ??
-              "Judge Error";
+            "Judge Error";
 
         if (
           finalStatus === "Judge Error" &&

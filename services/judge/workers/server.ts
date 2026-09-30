@@ -42,7 +42,10 @@ type ExecuteRequest = {
 };
 
 function normalizeOutput(value: string): string {
-  return value.replace(/\r\n/g, "\n").replace(/\r/g, "\n").trimEnd();
+  return value
+    .replace(/\r\n/g, "\n")
+    .replace(/\r/g, "\n")
+    .trimEnd();
 }
 
 function sendJson(
@@ -61,275 +64,308 @@ function byteLength(value: string): number {
   return Buffer.byteLength(value, "utf8");
 }
 
-const judgeEngine = createJudgeEngine();
+async function startServer(): Promise<void> {
+  const healthy = await checkJudgeEngineHealth();
 
-const server = http.createServer((req, res) => {
-  if (req.method !== "POST" || req.url !== "/execute") {
-    sendJson(res, 404, {
-      error: "Not Found"
-    });
-
-    return;
+  if (!healthy) {
+    throw new Error(
+      "No healthy execution engine is available."
+    );
   }
 
-  let body = "";
-  let bodySize = 0;
-  let requestTooLarge = false;
+  const judgeEngine = createJudgeEngine();
 
-  req.on("data", (chunk: Buffer) => {
-    bodySize += chunk.length;
-
-    if (bodySize > MAX_REQUEST_SIZE) {
-      requestTooLarge = true;
-      req.destroy();
-      return;
-    }
-
-    body += chunk.toString();
-  });
-
-  req.on("end", async () => {
-    if (requestTooLarge) {
-      sendJson(res, 413, {
-        status: "Judge Error",
-        error: "Request payload exceeds the maximum allowed size"
+  const server = http.createServer((req, res) => {
+    if (req.method !== "POST" || req.url !== "/execute") {
+      sendJson(res, 404, {
+        error: "Not Found"
       });
 
       return;
     }
 
-    let request: ExecuteRequest;
+    let body = "";
+    let bodySize = 0;
+    let requestTooLarge = false;
 
-    try {
-      request = JSON.parse(body);
-    } catch {
-      sendJson(res, 400, {
-        status: "Judge Error",
-        error: "Invalid JSON",
-        verificationMode: "NONE"
-      });
+    req.on("data", (chunk: Buffer) => {
+      bodySize += chunk.length;
 
-      return;
-    }
-
-    if (
-      ![
-        "python",
-        "c",
-        "cpp",
-        "java",
-        "javascript",
-        "typescript",
-        "go",
-        "rust",
-        "csharp",
-        "kotlin",
-        "sql"
-      ].includes(request.language)
-    ) {
-      sendJson(res, 400, {
-        status: "Judge Error",
-        error: "Unsupported language"
-      });
-
-      return;
-    }
-
-    if (typeof request.code !== "string") {
-      sendJson(res, 400, {
-        status: "Judge Error",
-        error: "Code must be a string"
-      });
-
-      return;
-    }
-
-    if (byteLength(request.code) > MAX_CODE_SIZE) {
-      sendJson(res, 413, {
-        status: "Judge Error",
-        error: "Code exceeds the maximum allowed size"
-      });
-
-      return;
-    }
-
-    const tests = request.tests ?? [
-      {
-        input: "",
-        expectedOutput: "",
-        visibility: "public" as const
-      }
-    ];
-
-    if (!Array.isArray(tests) || tests.length === 0) {
-      sendJson(res, 400, {
-        status: "Judge Error",
-        error: "At least one test case is required"
-      });
-
-      return;
-    }
-
-    if (tests.length > MAX_TEST_CASES) {
-      sendJson(res, 400, {
-        status: "Judge Error",
-        error: `Maximum of ${MAX_TEST_CASES} test cases allowed`
-      });
-
-      return;
-    }
-
-    for (const test of tests) {
-      if (
-        typeof test.input !== "string" ||
-        typeof test.expectedOutput !== "string"
-      ) {
-        sendJson(res, 400, {
-          status: "Judge Error",
-          error: "Test input and expected output must be strings"
-        });
-
+      if (bodySize > MAX_REQUEST_SIZE) {
+        requestTooLarge = true;
+        req.destroy();
         return;
       }
 
-      if (byteLength(test.input) > MAX_INPUT_SIZE) {
+      body += chunk.toString();
+    });
+
+    req.on("end", async () => {
+      if (requestTooLarge) {
         sendJson(res, 413, {
           status: "Judge Error",
-          error: "Test input exceeds the maximum allowed size"
+          error:
+            "Request payload exceeds the maximum allowed size"
         });
 
         return;
       }
 
-      if (
-        byteLength(test.expectedOutput) >
-        MAX_EXPECTED_OUTPUT_SIZE
-      ) {
-        sendJson(res, 413, {
-          status: "Judge Error",
-          error: "Expected output exceeds the maximum allowed size"
-        });
-
-        return;
-      }
-
-      if (
-        test.visibility !== undefined &&
-        test.visibility !== "public" &&
-        test.visibility !== "hidden"
-      ) {
-        sendJson(res, 400, {
-          status: "Judge Error",
-          error: "Invalid test visibility"
-        });
-
-        return;
-      }
-    }
-
-    let testIndex = 0;
-
-    const sendJudgeResponse = (response: JudgeResponse) => {
-      sendJson(res, 200, response);
-    };
-
-    const runTest = async () => {
-      const test = tests[testIndex];
-      const visibility = test.visibility ?? "public";
+      let request: ExecuteRequest;
 
       try {
-        const engineJobId = await judgeEngine.submit({
-          language: request.language,
-          code: request.code,
-          input: test.input
+        request = JSON.parse(body);
+      } catch {
+        sendJson(res, 400, {
+          status: "Judge Error",
+          error: "Invalid JSON",
+          verificationMode: "NONE"
         });
 
-        const result = await judgeEngine.pollStatus(engineJobId);
+        return;
+      }
 
-        if (result.status !== "Accepted") {
-          sendJudgeResponse({
-            status: result.status,
-            testCase: testIndex + 1,
-            exitCode: result.exitCode,
-            stdout: result.stdout,
-            stderr: result.stderr,
-            visibility,
-            executedBy: result.executedBy,
-            verificationMode: result.verificationMode
+      if (
+        ![
+          "python",
+          "c",
+          "cpp",
+          "java",
+          "javascript",
+          "typescript",
+          "go",
+          "rust",
+          "csharp",
+          "kotlin",
+          "sql"
+        ].includes(request.language)
+      ) {
+        sendJson(res, 400, {
+          status: "Judge Error",
+          error: "Unsupported language"
+        });
+
+        return;
+      }
+
+      if (typeof request.code !== "string") {
+        sendJson(res, 400, {
+          status: "Judge Error",
+          error: "Code must be a string"
+        });
+
+        return;
+      }
+
+      if (byteLength(request.code) > MAX_CODE_SIZE) {
+        sendJson(res, 413, {
+          status: "Judge Error",
+          error:
+            "Code exceeds the maximum allowed size"
+        });
+
+        return;
+      }
+
+      const tests = request.tests ?? [
+        {
+          input: "",
+          expectedOutput: "",
+          visibility: "public" as const
+        }
+      ];
+
+      if (!Array.isArray(tests) || tests.length === 0) {
+        sendJson(res, 400, {
+          status: "Judge Error",
+          error:
+            "At least one test case is required"
+        });
+
+        return;
+      }
+
+      if (tests.length > MAX_TEST_CASES) {
+        sendJson(res, 400, {
+          status: "Judge Error",
+          error: `Maximum of ${MAX_TEST_CASES} test cases allowed`
+        });
+
+        return;
+      }
+
+      for (const test of tests) {
+        if (
+          typeof test.input !== "string" ||
+          typeof test.expectedOutput !== "string"
+        ) {
+          sendJson(res, 400, {
+            status: "Judge Error",
+            error:
+              "Test input and expected output must be strings"
+          });
+
+          return;
+        }
+
+        if (byteLength(test.input) > MAX_INPUT_SIZE) {
+          sendJson(res, 413, {
+            status: "Judge Error",
+            error:
+              "Test input exceeds the maximum allowed size"
           });
 
           return;
         }
 
         if (
-          normalizeOutput(result.stdout) !==
-          normalizeOutput(test.expectedOutput)
+          byteLength(test.expectedOutput) >
+          MAX_EXPECTED_OUTPUT_SIZE
         ) {
-          sendJudgeResponse({
-            status: "Wrong Answer",
-            testCase: testIndex + 1,
-            exitCode: result.exitCode,
-            stdout: result.stdout,
-            stderr: result.stderr,
-            visibility,
-            executedBy: result.executedBy,
-            verificationMode: result.verificationMode
+          sendJson(res, 413, {
+            status: "Judge Error",
+            error:
+              "Expected output exceeds the maximum allowed size"
           });
 
           return;
         }
 
-        testIndex++;
+        if (
+          test.visibility !== undefined &&
+          test.visibility !== "public" &&
+          test.visibility !== "hidden"
+        ) {
+          sendJson(res, 400, {
+            status: "Judge Error",
+            error: "Invalid test visibility"
+          });
 
-        if (testIndex < tests.length) {
-          await runTest();
           return;
         }
-
-        sendJudgeResponse({
-          status: "Accepted",
-          testCase: tests.length,
-          exitCode: result.exitCode,
-          stdout: result.stdout,
-          stderr: result.stderr,
-          visibility,
-          executedBy: result.executedBy,
-          verificationMode: result.verificationMode
-        });
-      } catch (error) {
-        sendJudgeResponse({
-          status: "Judge Error",
-          testCase: testIndex + 1,
-          exitCode: null,
-          stdout: "",
-          stderr:
-            error instanceof Error
-              ? error.message
-              : String(error),
-          visibility,
-          executedBy: {
-            engineId: judgeEngine.name,
-            engineVersion: "unknown",
-            runtime: request.language,
-            runtimeVersion: "unknown"
-          },
-          verificationMode: "NONE"
-        });
       }
-    };
 
-    await runTest();
+      let testIndex = 0;
+
+      const sendJudgeResponse = (
+        response: JudgeResponse
+      ): void => {
+        sendJson(res, 200, response);
+      };
+
+      const runTest = async (): Promise<void> => {
+        const test = tests[testIndex];
+        const visibility =
+          test.visibility ?? "public";
+
+        try {
+          const engineJobId =
+            await judgeEngine.submit({
+              language: request.language,
+              code: request.code,
+              input: test.input
+            });
+
+          const result =
+            await judgeEngine.pollStatus(engineJobId);
+
+          if (result.status !== "Accepted") {
+            sendJudgeResponse({
+              status: result.status,
+              testCase: testIndex + 1,
+              exitCode: result.exitCode,
+              stdout: result.stdout,
+              stderr: result.stderr,
+              visibility,
+              executedBy: result.executedBy,
+              verificationMode:
+                result.verificationMode
+            });
+
+            return;
+          }
+
+          if (
+            normalizeOutput(result.stdout) !==
+            normalizeOutput(test.expectedOutput)
+          ) {
+            sendJudgeResponse({
+              status: "Wrong Answer",
+              testCase: testIndex + 1,
+              exitCode: result.exitCode,
+              stdout: result.stdout,
+              stderr: result.stderr,
+              visibility,
+              executedBy: result.executedBy,
+              verificationMode:
+                result.verificationMode
+            });
+
+            return;
+          }
+
+          testIndex++;
+
+          if (testIndex < tests.length) {
+            await runTest();
+            return;
+          }
+
+          sendJudgeResponse({
+            status: "Accepted",
+            testCase: tests.length,
+            exitCode: result.exitCode,
+            stdout: result.stdout,
+            stderr: result.stderr,
+            visibility,
+            executedBy: result.executedBy,
+            verificationMode:
+              result.verificationMode
+          });
+        } catch (error) {
+          sendJudgeResponse({
+            status: "Judge Error",
+            testCase: testIndex + 1,
+            exitCode: null,
+            stdout: "",
+            stderr:
+              error instanceof Error
+                ? error.message
+                : String(error),
+            visibility,
+            executedBy: {
+              engineId: judgeEngine.name,
+              engineVersion: "unknown",
+              runtime: request.language,
+              runtimeVersion: "unknown"
+            },
+            verificationMode: "NONE"
+          });
+        }
+      };
+
+      await runTest();
+    });
   });
-});
 
-server.listen(PORT, async () => {
-  const healthy = await checkJudgeEngineHealth();
+  server.listen(PORT, () => {
+    console.log(
+      `Judge service running on port ${PORT}`
+    );
 
-  console.log(
-    `Judge service running on port ${PORT}`
+    console.log(
+      "Judge engine health: healthy"
+    );
+  });
+}
+
+startServer().catch((error) => {
+  console.error(
+    "Judge server failed:",
+    error instanceof Error
+      ? error.message
+      : String(error)
   );
 
-  console.log(
-    `Judge engine health: ${healthy ? "healthy" : "unhealthy"}`
-  );
+  process.exit(1);
 });

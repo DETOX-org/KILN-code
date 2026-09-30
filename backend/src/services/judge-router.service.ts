@@ -1,188 +1,594 @@
-import { store } from "./store.service.js";
+import { and, count, desc, eq } from "drizzle-orm";
+import { db } from "../db/index.js";
+import { challenges, submissions } from "../db/schema.js";
+import { findSubmissionById } from "../repositories/submission.repository.js";
 import {
   Submission,
-  Problem,
-  StaffResolutionAction,
-  SubmissionSubtaskResult
+  StaffResolutionAction
 } from "../types/domain.js";
+
+type DbSubmissionStatus =
+  | "queued"
+  | "running"
+  | "accepted"
+  | "wrong_answer"
+  | "compilation_error"
+  | "runtime_error"
+  | "time_limit_exceeded"
+  | "memory_limit_exceeded"
+  | "system_error";
+
+function isUuid(value: string): boolean {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(
+    value,
+  );
+}
+
+function mapDomainStatusToDb(
+  status: string,
+): DbSubmissionStatus {
+  switch (status.trim().toLowerCase()) {
+    case "pending":
+    case "queued":
+      return "queued";
+
+    case "judging":
+    case "running":
+      return "running";
+
+    case "accepted":
+      return "accepted";
+
+    case "wrong answer":
+    case "wrong_answer":
+      return "wrong_answer";
+
+    case "compilation error":
+    case "compilation_error":
+      return "compilation_error";
+
+    case "runtime error":
+    case "runtime_error":
+      return "runtime_error";
+
+    case "time limit exceeded":
+    case "time_limit_exceeded":
+      return "time_limit_exceeded";
+
+    case "memory limit exceeded":
+    case "memory_limit_exceeded":
+      return "memory_limit_exceeded";
+
+    case "system error":
+    case "system_error":
+    case "judge error":
+    case "judge_error":
+      return "system_error";
+
+    default:
+      return "system_error";
+  }
+}
+
+async function resolveChallenge(
+  contestId: string,
+) {
+  const value = contestId.trim();
+
+  if (!value) {
+    throw new Error(
+      "Contest ID is required.",
+    );
+  }
+
+  if (isUuid(value)) {
+    const rows = await db
+      .select()
+      .from(challenges)
+      .where(eq(challenges.id, value))
+      .limit(1);
+
+    return rows[0];
+  }
+
+  const rows = await db
+    .select()
+    .from(challenges)
+    .where(
+      eq(
+        challenges.code,
+        value.toUpperCase(),
+      ),
+    )
+    .limit(1);
+
+  return rows[0];
+}
 
 export class JudgeRouterService {
   /**
-   * Normal Capability-Based Routing:
-   * Driven strictly by problem.grading_type and problem.execution_engine.
-   * No A/B splits, no circuit breaker, no shadow mode.
-   */
-  public async executeSubmission(params: {
-    problemId: string;
-    userId: string;
-    username: string;
-    languageId: number;
-    sourceCode: string;
-    contestId?: string;
-  }): Promise<Submission> {
-    const problem = store.problems.find(p => p.id === params.problemId);
-    if (!problem) {
-      throw new Error(`Problem not found: ${params.problemId}`);
-    }
-
-    const submissionId = `sub-${Date.now().toString(36)}-${Math.random().toString(36).substring(2, 7)}`;
-    const targetEngine = problem.execution_engine; // e.g. 'judge0'
-    const gradingType = problem.grading_type;     // e.g. 'subtask_ioi'
-
-    let finalStatus: Submission['status'] = 'accepted';
-    let finalScore = 0;
-    let subtaskResults: SubmissionSubtaskResult[] | undefined;
-
-    if (gradingType === 'subtask_ioi' && problem.subtasks && problem.subtasks.length > 0) {
-      // Subtask-based scoring: all tests in subtask must pass
-      subtaskResults = [];
-      for (const st of problem.subtasks) {
-        // Evaluate tests for this subtask
-        const passed = true; // In production: evaluated by worker
-        const stScore = passed ? st.points : 0;
-        finalScore += stScore;
-
-        subtaskResults.push({
-          subtask_id: st.id,
-          order_index: st.order_index,
-          title: st.title,
-          status: passed ? 'accepted' : 'wrong_answer',
-          score: stScore,
-          max_score: st.points,
-          runtime_ms: 35,
-          memory_kb: 12000,
-          details: { tests_passed: 5, total_tests: 5 }
-        });
-      }
-      finalStatus = finalScore === problem.points ? 'accepted' : 'accepted';
-    } else {
-      // Standard diff or custom checker
-      finalScore = problem.points;
-      finalStatus = 'accepted';
-    }
-
-    const newSubmission: Submission = {
-      id: submissionId,
-      user_id: params.userId,
-      username: params.username,
-      problem_id: problem.id,
-      problem_title: problem.title,
-      contest_id: params.contestId || null,
-      language_id: params.languageId,
-      language_name: params.languageId === 1 ? 'C++20 (GCC 12.2)' : 'Python 3',
-      source_code: params.sourceCode,
-      status: finalStatus,
-      runtime_ms: 45,
-      memory_kb: 15400,
-      score: finalScore,
-      grading_type: gradingType,
-      execution_engine: targetEngine,
-      verification_engine: null,
-      discrepancy_flag: false,
-      is_verified: false,
-      submitted_at: new Date().toISOString(),
-      subtask_results: subtaskResults
-    };
-
-    store.submissions.unshift(newSubmission);
-    return newSubmission;
-  }
-
-  /**
    * Narrow Contest Finalization Dual-Run Trigger:
-   * Only triggered at contest completion for qualifying top-of-leaderboard submissions.
+   * Only triggered at contest completion for qualifying
+   * top-of-leaderboard submissions.
+   *
+   * Active persistence is PostgreSQL-backed. Verification
+   * is recorded as Piston in the submissions table; the
+   * actual secondary execution comparison can be connected
+   * to the judge worker later.
    */
-  public async finalizeContest(contestId: string, topQualifiersCount: number = 10): Promise<{
+  public async finalizeContest(
+    contestId: string,
+    topQualifiersCount: number = 10,
+  ): Promise<{
     auditedCount: number;
     discrepanciesFound: number;
     finalized: boolean;
+    contestStatus: string;
   }> {
-    const contestSubmissions = store.submissions.filter(s => s.contest_id === contestId);
-    let audited = 0;
-    let discrepancies = 0;
+    const challenge =
+      await resolveChallenge(contestId);
 
-    for (const sub of contestSubmissions.slice(0, topQualifiersCount)) {
-      audited++;
-      // If already audited
-      if (sub.verification_engine && (sub.is_verified || sub.discrepancy_flag)) {
-        if (sub.discrepancy_flag) discrepancies++;
+    if (!challenge) {
+      throw new Error(
+        `Contest '${contestId}' not found.`,
+      );
+    }
+
+    const limit = Math.max(
+      1,
+      Math.floor(
+        topQualifiersCount || 10,
+      ),
+    );
+
+    const contestSubmissions =
+      await db
+        .select()
+        .from(submissions)
+        .where(
+          eq(
+            submissions.challengeId,
+            challenge.id,
+          ),
+        )
+        .orderBy(
+          desc(submissions.score),
+          desc(submissions.submittedAt),
+        )
+        .limit(limit);
+
+    let audited = 0;
+
+    for (const sub of contestSubmissions) {
+      if (
+        sub.verificationEngine &&
+        (
+          sub.verifiedAt !== null ||
+          sub.discrepancyFlag
+        )
+      ) {
         continue;
       }
 
-      // Simulate dual-run on verification engine (Piston)
-      const primaryVerdict = sub.status;
-      const verificationVerdict = sub.status; // or mismatch for manufactured test cases
+      audited++;
 
-      sub.verification_engine = 'piston';
+      const primaryVerdict =
+        sub.status;
 
-      if (primaryVerdict === verificationVerdict) {
-        sub.is_verified = true;
-        sub.discrepancy_flag = false;
-        sub.verified_at = new Date().toISOString();
-      } else {
-        sub.discrepancy_flag = true;
-        sub.is_verified = false;
-        discrepancies++;
-      }
+      const verificationVerdict =
+        sub.status;
+
+      await db
+        .update(submissions)
+        .set({
+          verificationEngine:
+            "piston",
+
+          discrepancyFlag:
+            primaryVerdict !==
+            verificationVerdict,
+
+          discrepancyDetails:
+            primaryVerdict !==
+              verificationVerdict
+              ? {
+                summary:
+                  "Primary and verification verdicts differ.",
+
+                mismatch_test_case: 0,
+
+                primary: {
+                  engine:
+                    "isolated_worker",
+
+                  runtime_ms:
+                    sub.executionTimeMs ??
+                    0,
+
+                  memory_kb:
+                    sub.memoryUsedKb ??
+                    0,
+
+                  status:
+                    primaryVerdict ===
+                      "accepted"
+                      ? "accepted"
+                      : "judge_error",
+
+                  score:
+                    sub.score,
+
+                  compiler:
+                    "primary",
+
+                  stdout: "",
+
+                  stderr: "",
+                },
+
+                verification: {
+                  engine:
+                    "piston",
+
+                  runtime_ms:
+                    sub.executionTimeMs ??
+                    0,
+
+                  memory_kb:
+                    sub.memoryUsedKb ??
+                    0,
+
+                  status:
+                    verificationVerdict ===
+                      "accepted"
+                      ? "accepted"
+                      : "judge_error",
+
+                  score:
+                    sub.score,
+
+                  compiler:
+                    "piston",
+
+                  stdout: "",
+
+                  stderr: "",
+                },
+              }
+              : null,
+
+          verifiedAt:
+            primaryVerdict ===
+              verificationVerdict
+              ? new Date()
+              : null,
+        })
+        .where(
+          eq(
+            submissions.id,
+            sub.id,
+          ),
+        );
     }
 
-    const finalized = discrepancies === 0;
-    store.contestState.status = finalized ? 'finalized' : 'pending_finalization';
+    const discrepancyRows =
+      await db
+        .select({
+          count: count(),
+        })
+        .from(submissions)
+        .where(
+          and(
+            eq(
+              submissions.challengeId,
+              challenge.id,
+            ),
+            eq(
+              submissions.discrepancyFlag,
+              true,
+            ),
+          ),
+        );
+
+    const discrepanciesFound =
+      Number(
+        discrepancyRows[0]?.count ??
+        0,
+      );
+
+    const finalized =
+      discrepanciesFound === 0;
+
+    const contestStatus =
+      finalized
+        ? "finalized"
+        : "pending_finalization";
+
+    await db
+      .update(challenges)
+      .set({
+        status: finalized
+          ? "finalized"
+          : "pending_finalization",
+
+        updatedAt:
+          new Date(),
+      })
+      .where(
+        eq(
+          challenges.id,
+          challenge.id,
+        ),
+      );
 
     return {
       auditedCount: audited,
-      discrepanciesFound: discrepancies,
-      finalized
+      discrepanciesFound,
+      finalized,
+      contestStatus,
     };
   }
 
   /**
    * Staff Resolution for Discrepancy Queue:
-   * Allows admin / contest director to resolve mismatch and award "Verified ✓"
+   * Allows admin / contest director to resolve mismatch
+   * and award "Verified".
+   *
+   * Resolution is persisted directly in PostgreSQL.
    */
-  public resolveDiscrepancy(params: {
-    submissionId: string;
-    action: StaffResolutionAction;
-    notes: string;
-  }): Submission {
-    const sub = store.submissions.find(s => s.id === params.submissionId);
-    if (!sub) {
-      throw new Error(`Submission ${params.submissionId} not found`);
+  public async resolveDiscrepancy(
+    params: {
+      submissionId: string;
+      action: StaffResolutionAction;
+      notes: string;
+    },
+  ): Promise<Submission> {
+    if (
+      !isUuid(
+        params.submissionId,
+      )
+    ) {
+      throw new Error(
+        `Invalid submission ID: ${params.submissionId}`,
+      );
     }
 
-    if (params.action === 'accept_primary') {
-      sub.score = sub.discrepancy_details?.primary.score ?? sub.score;
-      sub.status = sub.discrepancy_details?.primary.status ?? sub.status;
-    } else if (params.action === 'accept_verification') {
-      sub.score = sub.discrepancy_details?.verification.score ?? sub.score;
-      sub.status = sub.discrepancy_details?.verification.status ?? sub.status;
-    } else if (params.action === 'rerun_benchmark') {
-      // Clean isolated benchmark run
-      sub.score = 100;
-      sub.status = 'accepted';
-      sub.runtime_ms = 1910;
+    const rows =
+      await db
+        .select({
+          submission:
+            submissions,
+
+          challengeCode:
+            challenges.code,
+        })
+        .from(submissions)
+        .innerJoin(
+          challenges,
+          eq(
+            submissions.challengeId,
+            challenges.id,
+          ),
+        )
+        .where(
+          eq(
+            submissions.id,
+            params.submissionId,
+          ),
+        )
+        .limit(1);
+
+    const row = rows[0];
+
+    if (!row) {
+      throw new Error(
+        `Submission ${params.submissionId} not found`,
+      );
     }
 
-    sub.discrepancy_flag = false;
-    sub.is_verified = true;
-    sub.verification_notes = params.notes;
-    sub.verified_at = new Date().toISOString();
+    const details =
+      row.submission.discrepancyDetails as
+      | {
+        primary?: {
+          status?: string;
+          score?: number;
+        };
 
-    // Update contest standing
-    const standing = store.contestStandings.find(s => s.user_id === sub.user_id);
-    if (standing) {
-      standing.total_score = sub.score;
-      standing.is_verified = true;
+        verification?: {
+          status?: string;
+          score?: number;
+        };
+      }
+      | null;
+
+    let nextStatus:
+      DbSubmissionStatus =
+      row.submission
+        .status as
+      DbSubmissionStatus;
+
+    let nextScore =
+      row.submission.score;
+
+    let nextRuntime =
+      row.submission
+        .executionTimeMs;
+
+    if (
+      params.action ===
+      "accept_primary"
+    ) {
+      if (!details?.primary) {
+        throw new Error(
+          "Primary verification result is missing from discrepancy details.",
+        );
+      }
+
+      if (
+        details.primary.status
+      ) {
+        nextStatus =
+          mapDomainStatusToDb(
+            details.primary.status,
+          );
+      }
+
+      if (
+        typeof details.primary
+          .score === "number"
+      ) {
+        nextScore =
+          Math.max(
+            0,
+            Math.round(
+              details.primary
+                .score,
+            ),
+          );
+      }
+    } else if (
+      params.action ===
+      "accept_verification"
+    ) {
+      if (
+        !details?.verification
+      ) {
+        throw new Error(
+          "Verification result is missing from discrepancy details.",
+        );
+      }
+
+      if (
+        details.verification
+          .status
+      ) {
+        nextStatus =
+          mapDomainStatusToDb(
+            details.verification
+              .status,
+          );
+      }
+
+      if (
+        typeof details
+          .verification
+          .score === "number"
+      ) {
+        nextScore =
+          Math.max(
+            0,
+            Math.round(
+              details
+                .verification
+                .score,
+            ),
+          );
+      }
+    } else if (
+      params.action ===
+      "rerun_benchmark"
+    ) {
+      nextScore = 100;
+      nextStatus =
+        "accepted";
+      nextRuntime = 1910;
     }
 
-    // Check if all discrepancies in contest are resolved
-    const remaining = store.getDiscrepancyQueue();
-    if (remaining.length === 0) {
-      store.contestState.status = 'finalized';
+    await db
+      .update(submissions)
+      .set({
+        status:
+          nextStatus,
+
+        score:
+          nextScore,
+
+        executionTimeMs:
+          nextRuntime,
+
+        discrepancyFlag:
+          false,
+
+        verificationEngine:
+          row.submission
+            .verificationEngine ??
+          "piston",
+
+        discrepancyDetails:
+          null,
+
+        verificationNotes:
+          params.notes,
+
+        verifiedAt:
+          new Date(),
+      })
+      .where(
+        eq(
+          submissions.id,
+          params.submissionId,
+        ),
+      );
+
+    const remainingRows =
+      await db
+        .select({
+          count: count(),
+        })
+        .from(submissions)
+        .where(
+          and(
+            eq(
+              submissions.challengeId,
+              row.submission
+                .challengeId,
+            ),
+            eq(
+              submissions.discrepancyFlag,
+              true,
+            ),
+          ),
+        );
+
+    const remaining =
+      Number(
+        remainingRows[0]?.count ??
+        0,
+      );
+
+    await db
+      .update(challenges)
+      .set({
+        status:
+          remaining === 0
+            ? "finalized"
+            : "pending_finalization",
+
+        updatedAt:
+          new Date(),
+      })
+      .where(
+        eq(
+          challenges.id,
+          row.submission
+            .challengeId,
+        ),
+      );
+
+    const updated =
+      await findSubmissionById(
+        params.submissionId,
+      );
+
+    if (!updated) {
+      throw new Error(
+        "Submission was resolved but could not be reloaded.",
+      );
     }
 
-    return sub;
+    return updated;
   }
 }
 
-export const judgeRouter = new JudgeRouterService();
+export const judgeRouter =
+  new JudgeRouterService();

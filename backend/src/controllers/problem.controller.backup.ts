@@ -139,7 +139,6 @@ export const createProblem = async (
         error:
           "Field 'title' is required and must be a string.",
       });
-
       return;
     }
 
@@ -152,7 +151,6 @@ export const createProblem = async (
         error:
           "Field 'statement' is required and must be a string.",
       });
-
       return;
     }
 
@@ -173,7 +171,6 @@ export const createProblem = async (
         error:
           "Field 'difficulty' must be one of: 'easy', 'medium', 'hard'.",
       });
-
       return;
     }
 
@@ -213,7 +210,6 @@ export const createProblem = async (
         success: false,
         error: error.message,
       });
-
       return;
     }
 
