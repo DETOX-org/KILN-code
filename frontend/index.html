@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DETOX Code — Competitive Arena & Proctored Workspace</title>
+  
+  <!-- High-impact Industrial & Technical Typography -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Fira+Code:wght@400;500;600&family=Inter:wght@400;500;600;700&family=Rajdhani:wght@600;700&display=swap" rel="stylesheet">
+  
+  <link rel="stylesheet" href="css/style.css">
+  <!-- Firebase Web SDK (Compat mode for seamless Google OAuth) -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
+</head>
+<body class="theme-arena">
+
+  <!-- ========================================================================= -->
+  <!-- TOP GLOBAL HUD NAVIGATION                                                 -->
+  <!-- ========================================================================= -->
+  <header class="hud-header">
+    <div class="hud-left">
+      <div class="hud-brand" id="brandHomeBtn">
+        <span class="hud-brand-tag">DETOX</span>
+        <span class="hud-brand-title">CODE ARENA</span>
+      </div>
+      <div class="hud-telemetry-badge">
+        <span class="status-pip"></span>
+        <span class="telemetry-text">SERVER: ONLINE // KILN-V1.0</span>
+      </div>
+    </div>
+
+    <!-- Active In-Match HUD Center (Visible when match active) -->
+    <div class="hud-match-center" id="hudMatchCenter" style="display: none;">
+      <div class="hud-timer-box">
+        <span class="hud-timer-label">TIME REMAINING</span>
+        <span class="hud-timer-val" id="hudTimer">45:00</span>
+      </div>
+    </div>
+
+    <div class="hud-right">
+      <!-- In-Match Strikes Indicator -->
+      <div class="hud-strikes-panel" id="hudStrikesPanel" style="display: none;">
+        <span class="hud-strikes-label">STRIKES</span>
+        <div class="strike-pips" id="strikePips">
+          <span class="strike-pip" id="pip1"></span>
+          <span class="strike-pip" id="pip2"></span>
+          <span class="strike-pip" id="pip3"></span>
+        </div>
+      </div>
+
+      <!-- In-Match 10s Idle Autosave Indicator -->
+      <div class="hud-autosave-panel" id="hudAutosavePanel" style="display: none;">
+        <span class="autosave-led"></span>
+        <span class="autosave-status" id="autosaveStatus">IDLE (SAVED)</span>
+      </div>
+
+      <!-- In-Match Action Controls -->
+      <div class="hud-match-actions" id="hudMatchActions" style="display: none;">
+        <button class="btn btn-sharp btn-secondary" id="btnRunTests">▶ RUN TESTS</button>
+        <button class="btn btn-sharp btn-primary" id="btnSubmit">⚡ SUBMIT</button>
+        <button class="btn btn-sharp btn-danger" id="btnExitMatch">ESC // EXIT</button>
+      </div>
+
+      <!-- User Auth State Pill (Header) -->
+      <div id="userAuthNav" style="display: flex; align-items: center; gap: 8px;">
+        <button class="btn btn-sharp btn-primary" id="btnNavLogin" style="padding: 5px 12px; font-size: 0.75rem;">
+          🔑 SIGN IN WITH GOOGLE
+        </button>
+        <div id="userLoggedInPill" style="display: none; align-items: center; gap: 8px;">
+          <span class="user-auth-avatar" id="navUserAvatar" style="width: 26px; height: 26px; font-size: 0.75rem;">A</span>
+          <span style="font-size: 0.78rem; font-weight: 600; color: #fff;" id="navUserName">OPERATOR</span>
+          <button class="btn btn-sharp btn-danger" id="btnNavLogout" style="padding: 3px 8px; font-size: 0.68rem;">LOGOUT</button>
+        </div>
+      </div>
+
+      <!-- Lobby Nav Links (Visible when in lobby) -->
+      <div class="hud-lobby-links" id="hudLobbyLinks">
+        <button class="btn-link" id="navLobbyBtn">ARENA</button>
+        <button class="btn-link" id="navLeaderboardBtn">LEADERBOARD</button>
+        <button class="btn-link" id="navProtocolBtn">PROTOCOL</button>
+        <a href="admin.html" class="btn-link" style="color: var(--orange-flame); text-decoration: none;" id="navAdminBtn">⚙️ ADMIN PORTAL</a>
+      </div>
+    </div>
+  </header>
+
+  <!-- ========================================================================= -->
+  <!-- VIEW 1: ARENA LANDING PAGE & ACCESS CONTROL DECK (TACTICAL STITCH DESIGN) -->
+  <!-- ========================================================================= -->
+  <main class="arena-view landing-scroll-view" id="lobbyView">
+    <div class="landing-content-wrapper">
+      
+      <!-- Top Hero Section -->
+      <section class="arena-hero-left" style="max-width: 100%; text-align: left;">
+        <div class="tactical-subhead">
+          <span class="bracket-accent">[</span>
+          <span class="subhead-text">PROCTORED ALGORITHMIC BATTLEGROUNDS // ZERO-TRUST CODE ARENA</span>
+          <span class="bracket-accent">]</span>
+        </div>
+
+        <h1 class="arena-title" style="margin-bottom: 12px;">
+          DETOX CODE <span class="title-accent">BATTLEGROUNDS</span>
+        </h1>
+
+        <p class="arena-description" style="max-width: 860px; font-size: 1.05rem; line-height: 1.6; margin-bottom: 24px;">
+          Next-generation competitive programming battleground engineered for high-stakes algorithmic trials, hackathons, and speed trials. Developers write optimal solutions inside an isolated sandbox workspace under enforced proctored surveillance—featuring fullscreen enforcement, dual-monitor blur detection, external paste purges, and time-decay scoring.
+        </p>
+
+        <!-- Live Platform Telemetry Metrics (4 Boxed Panels) -->
+        <div class="tactical-metrics-grid" style="max-width: 860px; grid-template-columns: repeat(4, 1fr); margin-bottom: 28px;">
+          <div class="metric-card">
+            <div class="metric-icon">👥</div>
+            <div class="metric-data">
+              <span class="metric-number">4,821</span>
+              <span class="metric-label">ACTIVE COMBATANTS</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon">🛡️</div>
+            <div class="metric-data">
+              <span class="metric-number">99.98%</span>
+              <span class="metric-label">PROCTOR INTEGRITY</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon">⚡</div>
+            <div class="metric-data">
+              <span class="metric-number">11</span>
+              <span class="metric-label">ISOLATED RUNTIMES</span>
+            </div>
+          </div>
+
+          <div class="metric-card">
+            <div class="metric-icon">🔒</div>
+            <div class="metric-data">
+              <span class="metric-number">3/3</span>
+              <span class="metric-label">STRIKE ENFORCEMENT</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- INTERACTIVE ACCESS CONTROL DECK (DUAL TERMINALS)                          -->
+      <!-- ========================================================================= -->
+      <section class="access-deck-grid">
+        
+        <!-- CARD 1: GOOGLE / FIREBASE AUTHENTICATION TERMINAL -->
+        <div class="deck-card" id="deckCardAuth">
+          <span class="corner-bracket top-left"></span>
+          <span class="corner-bracket top-right"></span>
+          <span class="corner-bracket bottom-left"></span>
+          <span class="corner-bracket bottom-right"></span>
+
+          <div>
+            <div class="deck-card-header">
+              <div>
+                <span class="sharp-tag tag-spec" style="font-size: 0.7rem;">TERMINAL 01 // IDENTITY</span>
+                <div class="deck-card-title" style="margin-top: 6px;">OPERATOR ACCESS CLEARANCE</div>
+              </div>
+              <span class="sharp-tag tag-pts" id="authStatusPill">AWAITING AUTH</span>
+            </div>
+
+            <!-- Logged Out View -->
+            <div id="authLoggedOutBox">
+              <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 18px;">
+                Before entering any competition room, authenticate your operator identity via Google / Firebase. Unlocks room passcode verification and links your battleground callsign.
+              </p>
+
+              <!-- Google Sign In Button -->
+              <button type="button" class="btn-google" id="btnGoogleSignIn">
+                <svg width="18" height="18" viewBox="0 0 24 24">
+                  <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
+                  <path fill="#34A853" d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"/>
+                  <path fill="#FBBC05" d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"/>
+                  <path fill="#EA4335" d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"/>
+                </svg>
+                <span>CONTINUE WITH GOOGLE ACCOUNT</span>
+              </button>
+
+              <button type="button" class="btn btn-sharp btn-secondary" id="btnQuickDevLogin" style="width: 100%; margin-top: 10px; padding: 10px; font-size: 0.8rem;">
+                ⚡ INSTANT DEV OPERATOR SIGN-IN
+              </button>
+            </div>
+
+            <!-- Logged In View -->
+            <div id="authLoggedInBox" style="display: none;">
+              <div class="user-auth-badge">
+                <div class="user-auth-info">
+                  <div class="user-auth-avatar" id="operatorAvatar">O</div>
+                  <div>
+                    <div style="font-weight: 700; color: #fff; font-size: 0.95rem;" id="operatorDisplayName">OPERATOR</div>
+                    <div style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-code);" id="operatorEmail">operator@detox.local</div>
+                  </div>
+                </div>
+                <span class="sharp-tag tag-easy">VERIFIED ✓</span>
+              </div>
+
+              <div style="margin-top: 14px; display: flex; justify-content: space-between; align-items: center;">
+                <span style="font-size: 0.75rem; color: var(--green-pass);">Room passcode access unlocked!</span>
+                <button type="button" class="btn-link" id="btnDeckLogout" style="color: var(--red-fatal); font-size: 0.75rem;">Switch Account</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CARD 2: TACTICAL ROOM ACCESS CODE ENTRY TERMINAL -->
+        <div class="deck-card locked" id="deckCardRoom">
+          <span class="corner-bracket top-left"></span>
+          <span class="corner-bracket top-right"></span>
+          <span class="corner-bracket bottom-left"></span>
+          <span class="corner-bracket bottom-right"></span>
+
+          <div>
+            <div class="deck-card-header">
+              <div>
+                <span class="sharp-tag tag-spec" style="font-size: 0.7rem;">TERMINAL 02 // ACCESS</span>
+                <div class="deck-card-title" style="margin-top: 6px;">ENTER ARENA ROOM CODE</div>
+              </div>
+              <span class="sharp-tag tag-pts" id="roomTerminalStatus">LOCKED</span>
+            </div>
+
+            <!-- Locked notice when user is not logged in -->
+            <div id="roomLockedNotice" style="padding: 16px; background: rgba(0,0,0,0.4); border: 1px dashed var(--border-subtle); margin-bottom: 14px;">
+              <span style="color: var(--gold-alert); font-weight: 700; font-size: 0.85rem;">🔒 AUTHENTICATION REQUIRED</span>
+              <p style="font-size: 0.78rem; color: var(--text-dim); margin-top: 4px;">
+                You must sign in with Google on Terminal 01 before you can enter an arena room passcode.
+              </p>
+            </div>
+
+            <!-- Room Code Entry Form (Active when authenticated) -->
+            <form id="roomCodeEntryForm">
+              <div class="callsign-group" style="margin-bottom: 12px; max-width: 100%;">
+                <label class="input-label" for="sessionCodeInput">
+                  <span>ROOM ID // ACCESS CODE</span>
+                  <span class="input-req" style="color: var(--orange-flame);">NO AUTO-FETCH</span>
+                </label>
+                <div class="input-frame">
+                  <span class="input-prefix">#</span>
+                  <input 
+                    type="text" 
+                    id="sessionCodeInput" 
+                    class="input-sharp" 
+                    placeholder="ENTER ROOM ID (e.g. KILN-1001)" 
+                    maxlength="16"
+                    autocomplete="off"
+                    spellcheck="false"
+                  >
+                </div>
+                <div style="font-size: 0.72rem; color: var(--text-dim); margin-top: 4px;">
+                  Enter room ID provided by your competition host or admin.
+                </div>
+              </div>
+
+              <!-- Warrior Callsign (Derived from login or customizable) -->
+              <div class="callsign-group" style="margin-bottom: 16px; max-width: 100%;">
+                <label class="input-label" for="coderCallsign">
+                  <span>WARRIOR CALLSIGN // DISPLAY NAME</span>
+                  <span class="input-req">ROSTER NAME</span>
+                </label>
+                <div class="input-frame">
+                  <span class="input-prefix">&gt;</span>
+                  <input 
+                    type="text" 
+                    id="coderCallsign" 
+                    class="input-sharp" 
+                    placeholder="e.g. CIPHER_ZERO" 
+                    maxlength="24"
+                    autocomplete="off"
+                    spellcheck="false"
+                  >
+                </div>
+              </div>
+
+              <button type="submit" class="btn btn-sharp btn-primary" id="btnSubmitRoomCode" style="width: 100%; padding: 12px;">
+                ⚡ SUBMIT &amp; INSPECT ROOM
+              </button>
+            </form>
+          </div>
+        </div>
+
+      </section>
+
+      <!-- ========================================================================= -->
+      <!-- PROCTORED INTEGRITY ARCHITECTURE (ANTI-CHEAT FEATURE MATRIX)              -->
+      <!-- ========================================================================= -->
+      <section class="proctor-matrix-section">
+        <div class="tactical-subhead">
+          <span class="bracket-accent">[</span>
+          <span class="subhead-text">SECURITY ARCHITECTURE // INTEGRITY SPECIFICATIONS</span>
+          <span class="bracket-accent">]</span>
+        </div>
+        <h2 style="font-family: var(--font-display); font-size: 1.8rem; color: #fff; margin-bottom: 8px;">
+          PROCTORED INTEGRITY <span class="title-accent">ENGINE</span>
+        </h2>
+        <p style="font-size: 0.85rem; color: var(--text-muted); max-width: 800px;">
+          Multi-layer defense infrastructure engineered to guarantee competition validity, deter AI-injection and outside collusion, and enforce equal playing conditions across all participants.
+        </p>
+
+        <div class="proctor-matrix-grid">
+          <div class="proctor-feature-card">
+            <span class="corner-bracket top-left"></span>
+            <div class="proctor-feature-icon">🛡️</div>
+            <div class="proctor-feature-title">ZERO-TRUST SURVEILLANCE</div>
+            <div class="proctor-feature-desc">
+              Mandatory fullscreen lock with continuous window blur telemetry. Navigating away from the match triggers immediate anti-cheat strikes. 3 strikes result in permanent session disqualification.
+            </div>
+          </div>
+
+          <div class="proctor-feature-card">
+            <span class="corner-bracket top-left"></span>
+            <div class="proctor-feature-icon">⚡</div>
+            <div class="proctor-feature-title">ISOLATED SANDBOX EXECUTION</div>
+            <div class="proctor-feature-desc">
+              Source code compiles and executes inside isolated Piston containers with strict CPU time limits (2000ms) and memory boundaries (256MB). Zero internet connectivity permitted during runtime.
+            </div>
+          </div>
+
+          <div class="proctor-feature-card">
+            <span class="corner-bracket top-left"></span>
+            <div class="proctor-feature-icon">🔒</div>
+            <div class="proctor-feature-title">SEALED PROBLEM PROTOCOL</div>
+            <div class="proctor-feature-desc">
+              Algorithmic problem statements, test benchmarks, and constraints are cryptographically sealed. Participants cannot preview problems in advance, eliminating pre-caching and leak advantages.
+            </div>
+          </div>
+
+          <div class="proctor-feature-card">
+            <span class="corner-bracket top-left"></span>
+            <div class="proctor-feature-icon">📊</div>
+            <div class="proctor-feature-title">TIME-DECAY SCORING &amp; AUDIT</div>
+            <div class="proctor-feature-desc">
+              Dynamic scoring engine applies continuous time-decay penalties and deduction for incorrect runs. Single atomic write captures final code, execution telemetry, and proctor logs.
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODAL: SEALED ROOM DOSSIER & LOCAL LEADERBOARD                            -->
+  <!-- ========================================================================= -->
+  <div class="tactical-modal-overlay" id="sealedRoomModal">
+    <div class="tactical-modal-card modal-large" style="max-width: 960px;">
+      <span class="corner-bracket top-left"></span>
+      <span class="corner-bracket top-right"></span>
+      <span class="corner-bracket bottom-left"></span>
+      <span class="corner-bracket bottom-right"></span>
+
+      <div class="modal-badge-info">ROOM CLEARANCE VERIFIED</div>
+      <h2 class="modal-heading" id="modalRoomTitle">ROOM: KILN-1001</h2>
+
+      <!-- Room Specs & Host Info -->
+      <div style="background: var(--bg-deep); border: 1px solid var(--border-subtle); padding: 14px; margin-top: 12px; margin-bottom: 14px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+          <div>
+            <span style="font-size: 0.72rem; color: var(--text-dim); font-family: var(--font-code);">HOST // CREATED BY:</span>
+            <strong style="color: var(--orange-flame); margin-left: 6px;" id="modalRoomHost">ADMIN-CORE</strong>
+          </div>
+          <span class="sharp-tag tag-easy" id="modalRoomStatus">ACTIVE // LIVE</span>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; font-size: 0.78rem; background: rgba(0,0,0,0.3); padding: 8px 12px;">
+          <div><span style="color: var(--text-dim);">DURATION:</span> <strong id="modalRoomDuration">45 MIN</strong></div>
+          <div><span style="color: var(--text-dim);">DIFFICULTY:</span> <strong id="modalRoomDiff" class="val-difficulty">EASY</strong></div>
+          <div><span style="color: var(--text-dim);">POINTS:</span> <strong id="modalRoomPoints">100 PTS</strong></div>
+          <div><span style="color: var(--text-dim);">CODERS:</span> <strong id="modalRoomCoders">0 PARTICIPANTS</strong></div>
+        </div>
+      </div>
+
+      <!-- Sealed DSA Problem Capsule (User CANNOT see the DSA problem here) -->
+      <div class="sealed-problem-card">
+        <div class="sealed-stamp">🔒 CLASSIFIED // SEALED DSA CHALLENGE</div>
+        <h3 style="font-size: 1.05rem; color: #fff; margin-bottom: 6px;">
+          DSA PROBLEM: [SEALED UNDER PROCTORED PROTOCOL]
+        </h3>
+        <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin-bottom: 8px;">
+          The algorithmic problem statement, hidden test benchmarks, inputs, and starter templates are cryptographically sealed. To prevent unfair pre-caching and maintain competitive integrity, the problem will unseal automatically the moment you click <strong>Participate</strong> and lock into the fullscreen arena.
+        </p>
+        <div style="font-size: 0.75rem; color: var(--gold-alert); font-family: var(--font-code);">
+          RULES: FULLSCREEN ENFORCED // 3 STRIKES POLICY // ISOLATED PISTON SANDBOX
+        </div>
+      </div>
+
+      <!-- Room-Specific Leaderboard (Loaded Locally from Single Metadata Read) -->
+      <div style="font-size: 0.75rem; color: var(--text-dim); font-weight: 700; margin-bottom: 6px; font-family: var(--font-display);">
+        ROOM-SPECIFIC LEADERBOARD (LOCAL STANDINGS):
+      </div>
+      <div class="room-preview-table-container" style="max-height: 180px; margin-bottom: 16px;">
+        <table class="sharp-table" style="font-size: 0.75rem;">
+          <thead>
+            <tr>
+              <th>RANK</th>
+              <th>WARRIOR</th>
+              <th>SCORE</th>
+              <th>RUNTIME</th>
+              <th>STRIKES</th>
+              <th>STATUS</th>
+            </tr>
+          </thead>
+          <tbody id="modalRoomLeaderboardBody">
+            <tr><td colspan="6" style="text-align: center; color: var(--text-dim); padding: 14px;">No submissions for this room yet. Be the first!</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Participate in DSA Problem Action -->
+      <div class="modal-footer" style="display: flex; gap: 12px; justify-content: flex-end;">
+        <button type="button" class="btn btn-sharp btn-secondary" id="btnCloseSealedRoomModal">CANCEL</button>
+        <button type="button" class="btn btn-sharp btn-primary" id="btnParticipateDsa">
+          ⚡ PARTICIPATE IN THIS DSA CHALLENGE →
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ========================================================================= -->
+  <!-- VIEW 2: PROCTORED CODING WORKSPACE (SHARP CORNER INDUSTRIAL HUD)          -->
+  <!-- ========================================================================= -->
+  <main class="workspace-view" id="workspaceView" style="display: none;">
+    
+    <!-- Left Pane: Problem Dossier -->
+    <section class="pane-dossier">
+      <div class="dossier-header">
+        <div class="dossier-breadcrumbs">
+          <span>CHALLENGE</span> / <span id="breadcrumbId">TWO-SUM</span>
+        </div>
+        <div class="problem-switcher-bar" id="problemSwitcherBar">
+          <button class="prob-btn active" data-slug="two-sum">01. TWO SUM</button>
+          <button class="prob-btn" data-slug="reverse-string">02. REVERSE STRING</button>
+          <button class="prob-btn" data-slug="palindrome-number">03. PALINDROME</button>
+        </div>
+        <h2 class="dossier-title" id="problemTitle">1. Two Sum</h2>
+        <div class="dossier-tags">
+          <span class="sharp-tag tag-spec" id="activeSessionBadge" style="border-color: var(--orange-flame); color: #fff;">SESSION: KILN-1001</span>
+          <span class="sharp-tag tag-easy" id="probDifficulty">EASY</span>
+          <span class="sharp-tag tag-pts" id="probPoints">100 PTS</span>
+          <span class="sharp-tag tag-spec" id="probCpu">2000MS CPU</span>
+          <span class="sharp-tag tag-spec" id="probRam">256MB RAM</span>
+        </div>
+      </div>
+
+      <div class="dossier-content" id="problemContent">
+        <div class="content-block">
+          <p>Given an array of integers <code>nums</code> and an integer <code>target</code>, return indices of the two numbers such that they add up to <code>target</code>.</p>
+          <p>You may assume that each input would have <strong>exactly one solution</strong>, and you may not use the same element twice.</p>
+        </div>
+
+        <div class="tactical-case-block">
+          <div class="case-header">EXAMPLE CASE 01</div>
+          <div class="case-row">
+            <span class="case-key">INPUT:</span>
+            <code>nums = [2,7,11,15], target = 9</code>
+          </div>
+          <div class="case-row">
+            <span class="case-key">OUTPUT:</span>
+            <code>[0,1]</code>
+          </div>
+          <div class="case-row">
+            <span class="case-key">EXPLANATION:</span>
+            <span>Because nums[0] + nums[1] == 9, we return [0, 1].</span>
+          </div>
+        </div>
+
+        <div class="tactical-case-block">
+          <div class="case-header">EXAMPLE CASE 02</div>
+          <div class="case-row">
+            <span class="case-key">INPUT:</span>
+            <code>nums = [3,2,4], target = 6</code>
+          </div>
+          <div class="case-row">
+            <span class="case-key">OUTPUT:</span>
+            <code>[1,2]</code>
+          </div>
+        </div>
+
+        <div class="constraints-block">
+          <div class="constraints-title">OPERATIONAL CONSTRAINTS</div>
+          <ul class="constraints-list">
+            <li><code>2 &le; nums.length &le; 10<sup>4</sup></code></li>
+            <li><code>-10<sup>9</sup> &le; nums[i] &le; 10<sup>9</sup></code></li>
+            <li><code>-10<sup>9</sup> &le; target &le; 10<sup>9</sup></code></li>
+            <li>Only one valid answer exists.</li>
+          </ul>
+        </div>
+
+        <div class="proctor-alert-box">
+          <div class="alert-title">🔒 PROCTORED ARENA RULES ACTIVE</div>
+          <p>
+            Fullscreen mode locked. Tab switches, window blurring, and external copy-pastes are prohibited. Pasting from external applications will be purged instantly and increment your violation strikes.
+          </p>
+        </div>
+      </div>
+    </section>
+
+    <!-- Right Pane: Code Editor & Console Terminal -->
+    <section class="pane-editor">
+      
+      <!-- Editor Top Toolbar -->
+      <div class="editor-bar">
+        <div class="bar-left">
+          <span class="bar-label">LANGUAGE //</span>
+          <select id="languageSelect" class="sharp-select">
+            <option value="python" selected>Python 3.10.0</option>
+            <option value="cpp">C++ (GCC 10.2)</option>
+            <option value="java">Java 15.0.2</option>
+            <option value="javascript">JavaScript (Node 18)</option>
+            <option value="typescript">TypeScript 5.0</option>
+            <option value="rust">Rust 1.68.2</option>
+            <option value="go">Go 1.16.2</option>
+            <option value="csharp">C# (Mono 6.12)</option>
+            <option value="kotlin">Kotlin 1.8.20</option>
+          </select>
+        </div>
+
+        <div class="bar-right">
+          <span class="cursor-meta" id="cursorMeta">LN 1, COL 1</span>
+          <button class="btn-sharp btn-tool" id="btnFullscreenToggle">⛶ EXPAND</button>
+        </div>
+      </div>
+
+      <!-- Editor Main Frame with Custom Gutter Numbers -->
+      <div class="editor-main-frame">
+        <div class="editor-gutter-numbers" id="editorGutter">1</div>
+        <textarea 
+          id="codeEditor" 
+          class="editor-input-area" 
+          spellcheck="false" 
+          autocomplete="off" 
+          autocorrect="off" 
+          autocapitalize="off"
+        ></textarea>
+      </div>
+
+      <!-- Bottom Console Terminal -->
+      <div class="console-terminal">
+        <div class="terminal-bar">
+          <button class="terminal-tab active" id="tabTests">TEST CASES</button>
+          <button class="terminal-tab" id="tabOutput">OUTPUT TERMINAL</button>
+          <button class="terminal-tab" id="tabSnapshots">10S SNAPSHOTS (0)</button>
+        </div>
+
+        <div class="terminal-body" id="terminalBody">
+          <!-- Test Cases View -->
+          <div class="terminal-section" id="sectionTests">
+            <div class="tc-pills" id="tcPillsContainer">
+              <button class="tc-pill active" data-tc="1">CASE 01</button>
+              <button class="tc-pill" data-tc="2">CASE 02</button>
+            </div>
+            <div class="tc-io-grid">
+              <div class="io-col">
+                <span class="io-label">SAMPLE INPUT</span>
+                <pre class="io-pre" id="sampleInput">4&#10;2 7 11 15&#10;9</pre>
+              </div>
+              <div class="io-col">
+                <span class="io-label">EXPECTED OUTPUT</span>
+                <pre class="io-pre" id="sampleOutput">0 1</pre>
+              </div>
+            </div>
+          </div>
+
+          <!-- Execution Output View -->
+          <div class="terminal-section" id="sectionOutput" style="display: none;">
+            <div class="verdict-banner" id="verdictBanner">
+              <span class="verdict-tag" id="verdictTag">READY</span>
+              <span class="verdict-time" id="verdictTime">Click "Run Tests" or "Submit"</span>
+            </div>
+            <div class="test-results-container" id="testResultsList" style="display: none;"></div>
+            <pre class="io-pre console-log" id="consoleLog">Execution logs will display here upon evaluation...</pre>
+          </div>
+
+          <!-- Snapshots View -->
+          <div class="terminal-section" id="sectionSnapshots" style="display: none;">
+            <div class="snapshot-list" id="snapshotList">
+              <div class="snapshot-row">No 10-second idle snapshots created yet. Pause typing for 10 seconds to generate.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ========================================================================= -->
+  <!-- MODALS & POPUPS (ALL 100% SHARP CORNERS & TACTICAL HUD BORDERS)           -->
+  <!-- ========================================================================= -->
+
+  <!-- 1. Proctored Access Grant Modal -->
+  <div class="tactical-modal-overlay" id="entryModal">
+    <div class="tactical-modal-card">
+      <span class="corner-bracket top-left"></span>
+      <span class="corner-bracket top-right"></span>
+      <span class="corner-bracket bottom-left"></span>
+      <span class="corner-bracket bottom-right"></span>
+
+      <div class="modal-badge-warn">PROCTORED ENTRY ACCESS</div>
+      <h2 class="modal-heading">GRANT FULLSCREEN &amp; INTEGRITY ACCESS</h2>
+      
+      <p class="modal-lead">
+        You are entering a <strong>monitored timed challenge</strong>. Anti-cheat protocols are active:
+      </p>
+
+      <div class="rules-box">
+        <div class="rule-item">
+          <span class="rule-marker">01 //</span>
+          <span><strong>FULLSCREEN LOCK:</strong> The workspace will lock to fullscreen. Leaving triggers warning strikes.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-marker">02 //</span>
+          <span><strong>FOCUS SURVEILLANCE:</strong> Window blurring, secondary monitors, or switching tabs is monitored.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-marker">03 //</span>
+          <span><strong>INTERNAL CLIPBOARD ONLY:</strong> External pasted code will be instantly purged and struck.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-marker">04 //</span>
+          <span><strong>10S IDLE AUTO-SAVE:</strong> Code is snapshotted locally and synced on 10s typing pauses.</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-sharp btn-primary btn-large" id="btnGrantAccess">
+          ⚡ I AGREE &amp; ENTER FULLSCREEN
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 2. Escape Key & Exit Confirmation Modal -->
+  <div class="tactical-modal-overlay" id="exitModal">
+    <div class="tactical-modal-card modal-border-warn">
+      <span class="corner-bracket top-left"></span>
+      <span class="corner-bracket top-right"></span>
+      <span class="corner-bracket bottom-left"></span>
+      <span class="corner-bracket bottom-right"></span>
+
+      <div class="modal-badge-warn">WARNING // EXIT REQUEST</div>
+      <h2 class="modal-heading">ABANDON OR SUBMIT ATTEMPT?</h2>
+
+      <p class="modal-lead">
+        You initiated an exit via the <strong>Escape</strong> key or window control. Leaving terminates your session on the server.
+      </p>
+
+      <div class="modal-stack-buttons">
+        <button class="btn btn-sharp btn-primary" id="btnConfirmSubmitAndExit">
+          SUBMIT CURRENT CODE &amp; EXIT
+        </button>
+        <button class="btn btn-sharp btn-danger" id="btnConfirmAbandon">
+          ABANDON CHALLENGE &amp; FORFEIT
+        </button>
+        <button class="btn btn-sharp btn-secondary" id="btnCancelExit">
+          CANCEL &amp; RESUME FULLSCREEN
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 3. Strike Warning Modal -->
+  <div class="tactical-modal-overlay" id="strikeModal">
+    <div class="tactical-modal-card modal-border-danger">
+      <span class="corner-bracket top-left"></span>
+      <span class="corner-bracket top-right"></span>
+      <span class="corner-bracket bottom-left"></span>
+      <span class="corner-bracket bottom-right"></span>
+
+      <div class="modal-badge-danger">ANTI-CHEAT VIOLATION</div>
+      <h2 class="modal-heading" id="strikeModalTitle">STRIKE RECORDED: FOCUS LOST</h2>
+
+      <p class="modal-lead" id="strikeModalDesc">
+        You switched tabs or moved mouse focus to another monitor. A violation strike has been registered.
+      </p>
+
+      <div class="strike-alert-meter" id="strikeAlertMeter">
+        WARNING STRIKE 1 OF 3
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-sharp btn-primary btn-large" id="btnAcknowledgeStrike">
+          RETURN TO FULLSCREEN ARENA
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 4. Session Terminated Modal -->
+  <div class="tactical-modal-overlay" id="terminatedModal">
+    <div class="tactical-modal-card modal-border-fatal">
+      <span class="corner-bracket top-left"></span>
+      <span class="corner-bracket top-right"></span>
+      <span class="corner-bracket bottom-left"></span>
+      <span class="corner-bracket bottom-right"></span>
+
+      <div class="modal-badge-fatal">SESSION TERMINATED</div>
+      <h2 class="modal-heading">ARENA ACCESS REVOKED</h2>
+
+      <p class="modal-lead" id="terminatedModalDesc">
+        Your challenge attempt has been terminated for exceeding maximum allowed anti-cheat strikes (3/3).
+      </p>
+
+      <div class="terminated-log-box" id="terminatedDetails"></div>
+
+      <div class="modal-footer">
+        <button class="btn btn-sharp btn-secondary btn-large" onclick="window.location.reload()">
+          RELOAD ARENA
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 5. Leaderboard Modal -->
+  <div class="tactical-modal-overlay" id="leaderboardModal">
+    <div class="tactical-modal-card modal-large">
+      <span class="corner-bracket top-left"></span>
+      <span class="corner-bracket top-right"></span>
+      <span class="corner-bracket bottom-left"></span>
+      <span class="corner-bracket bottom-right"></span>
+
+      <div class="modal-badge-info">ROOM-SPECIFIC STANDINGS</div>
+      <h2 class="modal-heading" id="leaderboardModalTitle">ARENA ROOM LEADERBOARD</h2>
+
+      <!-- Room Selector inside modal -->
+      <div style="display: flex; gap: 10px; align-items: center; margin-bottom: 16px;">
+        <span style="font-size: 0.78rem; color: var(--text-dim); font-family: var(--font-display);">SWITCH ROOM:</span>
+        <input type="text" id="modalRoomInput" class="input-sharp" placeholder="e.g. KILN-1001" style="max-width: 180px; height: 32px; padding: 4px 8px; font-size: 0.8rem;" value="KILN-1001">
+        <button type="button" class="btn btn-sharp btn-secondary" id="btnModalLoadRoom" style="padding: 4px 12px; font-size: 0.75rem;">LOAD ROOM</button>
+        <span id="modalRoomHostTag" style="font-size: 0.75rem; color: var(--orange-flame); font-family: var(--font-code); margin-left: auto;"></span>
+      </div>
+
+      <div class="leaderboard-table-frame">
+        <table class="sharp-table">
+          <thead>
+            <tr>
+              <th>RANK</th>
+              <th>CALLSIGN</th>
+              <th>SCORE</th>
+              <th>RUNTIME</th>
+              <th>STRIKES</th>
+              <th>STATUS</th>
+            </tr>
+          </thead>
+          <tbody id="leaderboardBody">
+            <tr class="rank-gold">
+              <td>#01</td>
+              <td class="coder-name">CYBER_BLADE</td>
+              <td>3 / 3</td>
+              <td class="score-val">980</td>
+              <td>14m 20s</td>
+              <td><span class="sharp-tag tag-easy">ACCEPTED</span></td>
+            </tr>
+            <tr class="rank-silver">
+              <td>#02</td>
+              <td class="coder-name">VORTEX_DEV</td>
+              <td>3 / 3</td>
+              <td class="score-val">940</td>
+              <td>19m 45s</td>
+              <td><span class="sharp-tag tag-easy">ACCEPTED</span></td>
+            </tr>
+            <tr class="rank-bronze">
+              <td>#03</td>
+              <td class="coder-name">SHADOW_SYNTAX</td>
+              <td>2 / 3</td>
+              <td class="score-val">710</td>
+              <td>22m 10s</td>
+              <td><span class="sharp-tag tag-easy">ACCEPTED</span></td>
+            </tr>
+            <tr>
+              <td>#04</td>
+              <td class="coder-name">NULL_POINTER</td>
+              <td>2 / 3</td>
+              <td class="score-val">680</td>
+              <td>28m 05s</td>
+              <td><span class="sharp-tag tag-easy">ACCEPTED</span></td>
+            </tr>
+            <tr>
+              <td>#05</td>
+              <td class="coder-name">BINARY_GHOST</td>
+              <td>1 / 3</td>
+              <td class="score-val">350</td>
+              <td>33m 50s</td>
+              <td><span class="sharp-tag tag-pts">SUBMITTED</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-sharp btn-secondary" id="btnCloseLeaderboard">CLOSE LEADERBOARD</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- 6. Protocol / Rules Modal -->
+  <div class="tactical-modal-overlay" id="protocolModal">
+    <div class="tactical-modal-card">
+      <span class="corner-bracket top-left"></span>
+      <span class="corner-bracket top-right"></span>
+      <span class="corner-bracket bottom-left"></span>
+      <span class="corner-bracket bottom-right"></span>
+
+      <div class="modal-badge-info">SYSTEM SPECIFICATION</div>
+      <h2 class="modal-heading">DETOX COMPETITION PROTOCOL</h2>
+
+      <div class="rules-box">
+        <div class="rule-item">
+          <span class="rule-marker">JUDGE //</span>
+          <span>All submissions compile and execute inside isolated Piston containers with strict CPU and Memory boundaries.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-marker">SCORING //</span>
+          <span>Score = Base Points - (Time Elapsed &times; Decay) - (Wrong Attempts &times; Penalty). Faster solves rank higher.</span>
+        </div>
+        <div class="rule-item">
+          <span class="rule-marker">INTEGRITY //</span>
+          <span>Fullscreen required. Tab-switching, dual-monitor blur, and external pastes will forfeit your attempt.</span>
+        </div>
+      </div>
+
+      <div class="modal-footer">
+        <button class="btn btn-sharp btn-secondary" id="btnCloseProtocol">CLOSE PROTOCOL</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container (Sharp Tactical Toasts) -->
+  <div class="toast-container" id="toastContainer"></div>
+
+  <script src="js/anticheat.js"></script>
+</body>
+</html>
