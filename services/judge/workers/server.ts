@@ -3,10 +3,12 @@ import {
   createJudgeEngine,
   checkJudgeEngineHealth
 } from "../engines/index.js";
+import { PistonEngine } from "../engines/piston-engine.js";
 import type {
   JudgeResponse,
   TestVisibility
 } from "../../../shared/judge-result.js";
+import type { JudgeEngine, EngineResult } from "../engines/engine.js";
 
 const PORT = 3001;
 
@@ -61,7 +63,70 @@ function byteLength(value: string): number {
   return Buffer.byteLength(value, "utf8");
 }
 
-const judgeEngine = createJudgeEngine();
+// Piston is deliberately not part of engines/index.ts's routing table
+// (that file is Judge0 + DMOJ only). It's wired here, same as in
+// judge-worker.ts, purely as the failover path for this HTTP entry
+// point — so both execution paths (queue worker and this server)
+// share identical failover behavior.
+const pistonFailover = new PistonEngine();
+
+// Tracks whether Judge0/DMOJ passed their startup health check.
+// This replaces the old single-instance `judgeEngine` variable,
+// which can no longer exist as one shared instance now that
+// createJudgeEngine() requires a per-request language argument.
+let primariesHealthy = false;
+let pistonHealthy = false;
+
+async function runTestOnEngine(
+  engine: JudgeEngine,
+  request: { language: string; code: string },
+  test: { input: string; expectedOutput: string }
+): Promise<EngineResult> {
+  const engineJobId = await engine.submit({
+    language: request.language,
+    code: request.code,
+    input: test.input,
+    expectedOutput: test.expectedOutput
+  });
+
+  return engine.pollStatus(engineJobId);
+}
+
+async function runTestWithFailover(
+  request: { language: string; code: string },
+  test: { input: string; expectedOutput: string }
+): Promise<{ result: EngineResult; engineName: string }> {
+  const primaryEngine = createJudgeEngine(request.language);
+
+  try {
+    const result = await runTestOnEngine(
+      primaryEngine,
+      request,
+      test
+    );
+
+    if (result.status !== "Judge Error") {
+      return { result, engineName: primaryEngine.name };
+    }
+
+    console.error(
+      `Primary engine returned Judge Error for language "${request.language}", falling back to Piston`
+    );
+  } catch (error) {
+    console.error(
+      `Primary engine threw for language "${request.language}", falling back to Piston:`,
+      error instanceof Error ? error.message : String(error)
+    );
+  }
+
+  const fallbackResult = await runTestOnEngine(
+    pistonFailover,
+    request,
+    test
+  );
+
+  return { result: fallbackResult, engineName: pistonFailover.name };
+}
 
 const server = http.createServer((req, res) => {
   if (req.method !== "POST" || req.url !== "/execute") {
@@ -227,6 +292,16 @@ const server = http.createServer((req, res) => {
       }
     }
 
+    if (!primariesHealthy && !pistonHealthy) {
+      sendJson(res, 503, {
+        status: "Judge Error",
+        error: "Judge engine is not initialized",
+        verificationMode: "NONE"
+      });
+
+      return;
+    }
+
     let testIndex = 0;
 
     const sendJudgeResponse = (response: JudgeResponse) => {
@@ -238,13 +313,10 @@ const server = http.createServer((req, res) => {
       const visibility = test.visibility ?? "public";
 
       try {
-        const engineJobId = await judgeEngine.submit({
-          language: request.language,
-          code: request.code,
-          input: test.input
-        });
-
-        const result = await judgeEngine.pollStatus(engineJobId);
+        const { result } = await runTestWithFailover(
+          request,
+          test
+        );
 
         if (result.status !== "Accepted") {
           sendJudgeResponse({
@@ -308,7 +380,7 @@ const server = http.createServer((req, res) => {
               : String(error),
           visibility,
           executedBy: {
-            engineId: judgeEngine.name,
+            engineId: "unknown",
             engineVersion: "unknown",
             runtime: request.language,
             runtimeVersion: "unknown"
@@ -322,14 +394,30 @@ const server = http.createServer((req, res) => {
   });
 });
 
-server.listen(PORT, async () => {
-  const healthy = await checkJudgeEngineHealth();
+async function startServer(): Promise<void> {
+  primariesHealthy = await checkJudgeEngineHealth();
+  pistonHealthy = await pistonFailover.healthcheck();
 
   console.log(
-    `Judge service running on port ${PORT}`
+    `Judge engine health — Judge0/DMOJ: ${primariesHealthy ? "healthy" : "unhealthy"}, Piston: ${pistonHealthy ? "healthy" : "unhealthy"}`
   );
 
-  console.log(
-    `Judge engine health: ${healthy ? "healthy" : "unhealthy"}`
+  if (!primariesHealthy && !pistonHealthy) {
+    throw new Error("No healthy judge engine available");
+  }
+
+  server.listen(PORT, () => {
+    console.log(`Judge service running on port ${PORT}`);
+  });
+}
+
+startServer().catch((error) => {
+  console.error(
+    "Judge service failed to start:",
+    error instanceof Error
+      ? error.message
+      : String(error)
   );
+
+  process.exit(1);
 });

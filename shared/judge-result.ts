@@ -1,3 +1,13 @@
+export enum JudgeResultState {
+  ACCEPTED = "Accepted",
+  WRONG_ANSWER = "Wrong Answer",
+  COMPILATION_ERROR = "Compilation Error",
+  RUNTIME_ERROR = "Runtime Error",
+  TIME_LIMIT_EXCEEDED = "Time Limit Exceeded",
+  MEMORY_LIMIT_EXCEEDED = "Memory Limit Exceeded",
+  JUDGE_ERROR = "Judge Error"
+}
+
 export type JudgeStatus =
   | "Accepted"
   | "Wrong Answer"
@@ -10,6 +20,10 @@ export type JudgeStatus =
 export type TestVisibility =
   | "public"
   | "hidden";
+
+export type ExecutionMode =
+  | "run"
+  | "submit";
 
 export type VerificationMode =
   | "NONE"
@@ -24,13 +38,37 @@ export interface ExecutionMetadata {
   sandboxConfigVersion?: string;
 }
 
+export interface JobLimits {
+  cpuTimeLimitMs?: number;
+  wallTimeLimitMs?: number;
+  memoryLimitKb?: number;
+}
+
+export interface ExecutionJob {
+  jobId?: string;
+  language: string;
+  code: string;
+  input: string;
+  expectedOutput?: string;
+  mode?: ExecutionMode;
+  visibility?: TestVisibility;
+  limits?: JobLimits;
+}
+
 export interface JudgeResult {
-  status: JudgeStatus;
+  status: JudgeStatus | JudgeResultState;
   exitCode: number | null;
   stdout: string;
   stderr: string;
+  internalErrorDetail?: string;
+  timeMs?: number;
+  memoryKb?: number;
   executedBy: ExecutionMetadata;
   verificationMode: VerificationMode;
+}
+
+export interface ExecutionResult extends JudgeResult {
+  token?: string;
 }
 
 export interface JudgeResponse extends JudgeResult {

@@ -5,9 +5,12 @@ import {
   acknowledgeJudgeJob,
   recoverProcessingJobs
 } from "./redis-queue.js";
-import { createJudgeEngine } from "../engines/index.js";
-
-const judgeEngine = createJudgeEngine();
+import {
+  createJudgeEngine,
+  checkJudgeEngineHealth
+} from "../engines/index.js";
+import { PistonEngine } from "../engines/piston-engine.js";
+import type { JudgeEngine, EngineResult } from "../engines/engine.js";
 
 const redisUrl =
   process.env.REDIS_URL ?? "redis://redis:6379";
@@ -36,6 +39,13 @@ const SUPPORTED_LANGUAGES = new Set([
   "kotlin",
   "sql"
 ]);
+
+// Piston is deliberately NOT part of engines/index.ts's LANGUAGE_ROUTING
+// (that file is Judge0 + DMOJ only). It's wired here, in the worker,
+// purely as the failover path — tried only if the primary engine
+// (Judge0 or DMOJ, whichever createJudgeEngine(job.language) picks)
+// fails to submit or returns "Judge Error".
+const pistonFailover = new PistonEngine();
 
 function byteLength(value: string): number {
   return Buffer.byteLength(value, "utf8");
@@ -101,7 +111,93 @@ function validateJob(job: {
   return null;
 }
 
+/**
+ * Runs a single test case against a given engine. Used for both the
+ * primary attempt and the Piston failover attempt, so the two code
+ * paths can't silently diverge in behavior.
+ */
+async function runTestOnEngine(
+  engine: JudgeEngine,
+  job: { language: string; code: string },
+  test: { input: string; expectedOutput: string }
+): Promise<EngineResult> {
+  const engineJobId = await engine.submit({
+    language: job.language,
+    code: job.code,
+    input: test.input,
+    expectedOutput: test.expectedOutput
+  });
+
+  return engine.pollStatus(engineJobId);
+}
+
+/**
+ * Runs a test case on the primary engine (Judge0 or DMOJ, selected
+ * by job.language). If submit/poll throws, or the primary returns
+ * "Judge Error", retries the same test once on Piston. Returns the
+ * primary's result unchanged for every other outcome (Accepted,
+ * Wrong Answer, TLE, MLE, Compilation Error, Runtime Error) — those
+ * are real graded results, not infrastructure failures, so they are
+ * never failed over.
+ */
+async function runTestWithFailover(
+  job: { language: string; code: string },
+  test: { input: string; expectedOutput: string }
+): Promise<{ result: EngineResult; failedOver: boolean }> {
+  const primaryEngine = createJudgeEngine(job.language);
+
+  try {
+    const result = await runTestOnEngine(
+      primaryEngine,
+      job,
+      test
+    );
+
+    if (result.status !== "Judge Error") {
+      return { result, failedOver: false };
+    }
+
+    console.error(
+      `Primary engine returned Judge Error for language "${job.language}", falling back to Piston`
+    );
+  } catch (error) {
+    console.error(
+      `Primary engine threw for language "${job.language}", falling back to Piston:`,
+      error instanceof Error ? error.message : String(error)
+    );
+  }
+
+  const fallbackResult = await runTestOnEngine(
+    pistonFailover,
+    job,
+    test
+  );
+
+  return { result: fallbackResult, failedOver: true };
+}
+
 async function startWorker(): Promise<void> {
+  const primariesHealthy = await checkJudgeEngineHealth();
+  const pistonHealthy = await pistonFailover.healthcheck();
+
+  if (!primariesHealthy && !pistonHealthy) {
+    throw new Error(
+      "No healthy judge engine available (Judge0, DMOJ, and Piston are all unreachable)"
+    );
+  }
+
+  if (!primariesHealthy) {
+    console.warn(
+      "Judge0/DMOJ health check failed at startup — worker will rely on Piston failover until they recover"
+    );
+  }
+
+  if (!pistonHealthy) {
+    console.warn(
+      "Piston health check failed at startup — failover will not be available if Judge0/DMOJ fail"
+    );
+  }
+
   console.log("Judge worker started");
 
   await recoverProcessingJobs();
@@ -190,16 +286,15 @@ async function startWorker(): Promise<void> {
         );
 
         const results = [];
+        let anyFailover = false;
 
         for (const test of job.tests) {
-          const engineJobId = await judgeEngine.submit({
-            language: job.language,
-            code: job.code,
-            input: test.input
-          });
+          const { result, failedOver } =
+            await runTestWithFailover(job, test);
 
-          const result =
-            await judgeEngine.pollStatus(engineJobId);
+          if (failedOver) {
+            anyFailover = true;
+          }
 
           const visibility =
             test.visibility ?? "public";
@@ -295,6 +390,7 @@ async function startWorker(): Promise<void> {
           jobId: job.jobId,
           status: finalStatus,
           results,
+          usedFailover: anyFailover,
           attempt: attempt + 1
         };
 
@@ -308,7 +404,7 @@ async function startWorker(): Promise<void> {
         await acknowledgeJudgeJob(job.jobId);
 
         console.log(
-          `Judge job ${job.jobId} completed with ${results.length} result(s)`
+          `Judge job ${job.jobId} completed with ${results.length} result(s)${anyFailover ? " (used Piston failover)" : ""}`
         );
       } finally {
         await redis.del(processingKey);
