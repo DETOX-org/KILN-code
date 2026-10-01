@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import PhoenixHero from './PhoenixHero';
 import { Flame, Trophy, Target, Zap, Clock, ArrowRight, Award, CheckCircle2, TrendingUp, Sparkles, BookOpen } from 'lucide-react';
 
 export default function DashboardView({ onSelectProblem, onOpenContests, onOpenCourses }) {
@@ -18,6 +19,10 @@ export default function DashboardView({ onSelectProblem, onOpenContests, onOpenC
 
   return (
     <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: '24px' }}>
+      <PhoenixHero
+        onPractice={() => onSelectProblem({ title: 'Maximum Subarray Sum with Modulo K', id: 142 })}
+        onCompete={onOpenContests}
+      />
       
       {/* ----------------- TODAY'S CHALLENGE HERO CARD ----------------- */}
       <div className="card" style={{
@@ -52,9 +57,9 @@ export default function DashboardView({ onSelectProblem, onOpenContests, onOpenC
               </span>
             </div>
 
-            <h1 style={{ fontSize: '26px', fontWeight: 800, color: 'var(--ink-primary)', letterSpacing: '-0.3px', margin: '4px 0 8px' }}>
+            <h2 style={{ fontSize: '26px', fontWeight: 800, color: 'var(--ink-primary)', letterSpacing: '-0.3px', margin: '4px 0 8px' }}>
               Maximum Subarray Sum with Modulo K
-            </h1>
+            </h2>
             <p style={{ fontSize: '14px', color: 'var(--ink-secondary)', lineHeight: 1.6, margin: 0 }}>
               Find the maximum possible contiguous subarray sum modulo K in <code>O(N log N)</code> time using self-balancing binary search trees.
             </p>
