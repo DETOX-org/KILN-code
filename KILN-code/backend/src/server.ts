@@ -1,0 +1,13 @@
+try {
+  process.loadEnvFile?.();
+} catch {
+  // Ignore if .env is missing or already loaded
+}
+
+import app from "./app.js";
+
+const PORT = process.env.PORT || 3000;
+
+app.listen(PORT, () => {
+  console.log(`DETOX Code backend running on port ${PORT}`);
+});

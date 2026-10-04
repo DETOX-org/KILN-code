@@ -1,0 +1,100 @@
+/* KILN-Code Design System Tokens - CSS Custom Properties */
+@import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap');
+
+:root {
+  /* Surfaces & Ink */
+  --ink: #12181F;
+  --ink-secondary: #334155;
+  --sub: #4B5768;
+  --sub-light: #64748B;
+  --line: #D7DEE7;
+  --line-light: #E2E8F0;
+  --paper: #EFF2F6;
+  --panel: #FFFFFF;
+  --gutter: #DDE3EC;
+  --card-hover: #F8FAFC;
+
+  /* Status Colors */
+  --status-accepted-text: #0E7A4C;
+  --status-accepted-bg: #E4F7EE;
+  --status-accepted-border: #A3E6C5;
+  --status-accepted-solid: #1AAE6F;
+
+  --status-wrong-text: #B4272B;
+  --status-wrong-bg: #FCE7E8;
+  --status-wrong-border: #F8B4B7;
+  --status-wrong-solid: #E5484D;
+
+  --status-pending-text: #8A5E0B;
+  --status-pending-bg: #FDF3DC;
+  --status-pending-border: #F8DF9E;
+  --status-pending-solid: #E6A415;
+
+  --status-tle-text: #9A4B00;
+  --status-tle-bg: #FFF1E5;
+  --status-tle-border: #FDC79F;
+  --status-tle-solid: #F76B15;
+
+  --status-mle-text: #793392;
+  --status-mle-bg: #F9EDFC;
+  --status-mle-border: #E4B8F3;
+  --status-mle-solid: #AB4ABA;
+
+  --status-error-text: #475569;
+  --status-error-bg: #F1F5F9;
+  --status-error-border: #CBD5E1;
+  --status-error-solid: #64748B;
+
+  /* Verification & Discrepancy Tokens */
+  --verified-badge-text: #0D7A68;
+  --verified-badge-bg: #E6F8F4;
+  --verified-badge-border: #99E8D8;
+  --verified-badge-solid: #0EA5E9;
+
+  --discrepancy-flag-text: #9A1F45;
+  --discrepancy-flag-bg: #FDF0F3;
+  --discrepancy-flag-border: #F8B6C7;
+  --discrepancy-flag-solid: #D92D5B;
+
+  /* Subtask Accent */
+  --subtask-accent: #6366F1;
+  --subtask-bg: #EEF2FF;
+  --subtask-border: #C7D2FE;
+
+  /* Typography */
+  --font-sans: 'IBM Plex Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --font-mono: 'IBM Plex Mono', 'SFMono-Regular', Consolas, Menlo, monospace;
+
+  /* Radius */
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 10px;
+  --radius-xl: 14px;
+  --radius-pill: 9999px;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(18, 24, 31, 0.05);
+  --shadow-md: 0 4px 6px -1px rgba(18, 24, 31, 0.08), 0 2px 4px -2px rgba(18, 24, 31, 0.04);
+  --shadow-lg: 0 10px 15px -3px rgba(18, 24, 31, 0.08), 0 4px 6px -4px rgba(18, 24, 31, 0.04);
+}
+
+/* Dark Theme Support */
+[data-theme="dark"] {
+  --ink: #F1F5F9;
+  --ink-secondary: #CBD5E1;
+  --sub: #94A3B8;
+  --sub-light: #64748B;
+  --line: #334155;
+  --line-light: #1E293B;
+  --paper: #0F172A;
+  --panel: #1E293B;
+  --gutter: #1E293B;
+  --card-hover: #1E293B;
+
+  --status-accepted-bg: rgba(26, 174, 111, 0.15);
+  --status-accepted-text: #4ADE80;
+  --status-wrong-bg: rgba(229, 72, 77, 0.15);
+  --status-wrong-text: #F87171;
+  --status-pending-bg: rgba(230, 164, 21, 0.15);
+  --status-pending-text: #FBBF24;
+}
