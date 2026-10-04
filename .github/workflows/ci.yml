@@ -1,0 +1,45 @@
+name: Repository Validation CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  validate-repository:
+    name: Validate Repository Structure & Consistency
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Verify Key Repository Files Exist
+        run: |
+          echo "Checking essential governance and documentation files..."
+          test -f README.md || (echo "README.md missing" && exit 1)
+          test -f CONTRIBUTING.md || (echo "CONTRIBUTING.md missing" && exit 1)
+          test -f CODE_OF_CONDUCT.md || (echo "CODE_OF_CONDUCT.md missing" && exit 1)
+          test -f SECURITY.md || (echo "SECURITY.md missing" && exit 1)
+          test -f LICENSE || (echo "LICENSE missing" && exit 1)
+          test -f .editorconfig || (echo ".editorconfig missing" && exit 1)
+          test -f .gitignore || (echo ".gitignore missing" && exit 1)
+          test -f docs/architecture/overview.md || (echo "docs/architecture/overview.md missing" && exit 1)
+          test -f docs/roadmap.md || (echo "docs/roadmap.md missing" && exit 1)
+          echo "All required initial files verified successfully."
+
+      - name: Verify Directory Tree Layout
+        run: |
+          echo "Checking core component directory structure..."
+          test -d frontend || (echo "frontend/ directory missing" && exit 1)
+          test -d backend || (echo "backend/ directory missing" && exit 1)
+          test -d judge || (echo "judge/ directory missing" && exit 1)
+          test -d shared || (echo "shared/ directory missing" && exit 1)
+          echo "Directory layout verified successfully."
+
+# TODO (Future Tech Stack Integration):
+# Once the technology stack for DETOX Code is selected:
+# 1. Add job for 'frontend': install dependencies, run linter, type check, unit tests & build.
+# 2. Add job for 'backend': compile/lint, run unit and integration tests.
+# 3. Add job for 'judge': compile sandbox components, run isolation unit tests.
+# 4. Add security & vulnerability scanning for dependencies.
