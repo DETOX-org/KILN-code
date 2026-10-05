@@ -3,9 +3,9 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Shield, ShieldAlert, Video, Mic, Wifi, Maximize2, AlertTriangle, Eye, CheckCircle2, Lock, Clock, Terminal, RefreshCw, XCircle } from 'lucide-react';
 
-export default function StrictAssessmentView() {
+export default function StrictAssessmentView({ sessionId = 'KILN-1001', initialPhase = 'preflight' }) {
   // Phase: 'preflight' | 'locked_session' | 'auto_submitted'
-  const [sessionPhase, setSessionPhase] = useState('preflight');
+  const [sessionPhase, setSessionPhase] = useState(initialPhase);
   
   // Pre-flight checks state
   const [checks, setChecks] = useState({

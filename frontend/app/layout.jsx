@@ -5,6 +5,8 @@ export const metadata = {
   description: 'Enterprise-grade competitive coding, subtask evaluation, and contest-trust dual-engine verification platform.',
 };
 
+import ClientProviders from './ClientProviders';
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
@@ -18,7 +20,9 @@ export default function RootLayout({ children }) {
         />
       </head>
       <body>
-        {children}
+        <ClientProviders>
+          {children}
+        </ClientProviders>
       </body>
     </html>
   );

@@ -1,53 +1,163 @@
-import { Router, Request, Response } from "express";
-import { store } from "../services/store.service.js";
+import {
+  Router,
+  Request,
+  Response,
+} from "express";
+
+import {
+  getChallengeLeaderboard,
+  getContestList,
+} from "../repositories/leaderboard.repository.js";
 
 const router = Router();
 
-// GET /api/contests — List active contests
-router.get("/", (_req: Request, res: Response) => {
-  res.json({
-    success: true,
-    data: [
-      {
-        id: store.contestState.id,
-        title: store.contestState.title,
-        status: store.contestState.status,
-        participantsCount: store.contestStandings.length,
-        discrepancy_count: store.getDiscrepancyQueue().length
-      }
-    ]
-  });
-});
+function getContestId(req: Request): string {
+  return Array.isArray(req.params.id)
+    ? req.params.id[0]
+    : req.params.id;
+}
+
+// GET /api/contests
+// Kept for compatibility with the current frontend.
+// GET /api/contests
+// Lists contests directly from PostgreSQL.
+router.get(
+  "/",
+  async (
+    _req: Request,
+    res: Response,
+  ) => {
+    try {
+      const contests =
+        await getContestList();
+
+      res.json({
+        success: true,
+        data: contests,
+      });
+    } catch (err: any) {
+      res.status(500).json({
+        success: false,
+        error:
+          err.message ||
+          "Failed to load contests",
+      });
+    }
+  },
+);
 
 // GET /api/contests/:id
-router.get("/:id", (req: Request, res: Response) => {
-  res.json({
-    id: store.contestState.id,
-    title: store.contestState.title,
-    status: store.contestState.status,
-    discrepancy_count: store.getDiscrepancyQueue().length,
-    standings: store.contestStandings
-  });
-});
+// Contest details + PostgreSQL-backed standings.
+// GET /api/contests
+// Lists contests directly from PostgreSQL.
+
+// GET /api/contests/:id
+// Contest details + PostgreSQL-backed standings.
+router.get(
+  "/:id",
+  async (
+    req: Request,
+    res: Response,
+  ) => {
+    try {
+      const contestId = Array.isArray(
+        req.params.id,
+      )
+        ? req.params.id[0]
+        : req.params.id;
+
+      const leaderboard =
+        await getChallengeLeaderboard(
+          contestId,
+        );
+
+      res.json({
+        id:
+          leaderboard.contestId,
+        title:
+          leaderboard.title,
+        status:
+          leaderboard.status,
+        standings:
+          leaderboard.standings,
+      });
+    } catch (err: any) {
+      res.status(404).json({
+        success: false,
+        error:
+          err.message ||
+          "Failed to load contest",
+      });
+    }
+  },
+);
 
 // GET /api/contests/:id/standings
-router.get("/:id/standings", (_req: Request, res: Response) => {
-  res.json({
-    contest_id: store.contestState.id,
-    title: store.contestState.title,
-    status: store.contestState.status,
-    standings: store.contestStandings
-  });
-});
+router.get(
+  "/:id/standings",
+  async (
+    req: Request,
+    res: Response,
+  ) => {
+    try {
+      const leaderboard =
+        await getChallengeLeaderboard(
+          getContestId(req),
+        );
 
-// GET /api/contests/:id/leaderboard (alias for standings)
-router.get("/:id/leaderboard", (_req: Request, res: Response) => {
-  res.json({
-    contest_id: store.contestState.id,
-    title: store.contestState.title,
-    status: store.contestState.status,
-    standings: store.contestStandings
-  });
-});
+      res.json({
+        contest_id:
+          leaderboard.contestId,
+        title:
+          leaderboard.title,
+        status:
+          leaderboard.status,
+        standings:
+          leaderboard.standings,
+      });
+    } catch (err: any) {
+      res.status(404).json({
+        success: false,
+        error:
+          err.message ||
+          "Failed to load contest standings",
+      });
+    }
+  },
+);
+
+// GET /api/contests/:id/leaderboard
+router.get(
+  "/:id/leaderboard",
+  async (
+    req: Request,
+    res: Response,
+  ) => {
+    try {
+      const leaderboard =
+        await getChallengeLeaderboard(
+          getContestId(req),
+        );
+
+      res.json({
+        contest_id:
+          leaderboard.contestId,
+        title:
+          leaderboard.title,
+        status:
+          leaderboard.status,
+        standings:
+          leaderboard.standings,
+      });
+    } catch (err: any) {
+      res.status(404).json({
+        success: false,
+        error:
+          err.message ||
+          "Failed to load contest leaderboard",
+      });
+    }
+  },
+);
 
 export default router;

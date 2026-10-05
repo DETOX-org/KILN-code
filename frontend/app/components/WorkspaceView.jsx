@@ -1,8 +1,8 @@
 'use client';
 
 import React, { useState, useEffect } from 'react';
-import confetti from 'canvas-confetti';
-import { Play, Send, RotateCcw, Copy, Check, Sparkles, Terminal, Activity, FileText, History, Globe, Shield, Code2, AlertCircle } from 'lucide-react';
+import Link from 'next/link';
+import { Play, Send, RotateCcw, Copy, Check, Sparkles, Terminal, Activity, FileText, History, Globe, Shield, Code2, AlertCircle, Cpu, ArrowRight } from 'lucide-react';
 import RadarChart from './RadarChart';
 
 export default function WorkspaceView({ activeProblem, onSolveContest }) {
@@ -891,6 +891,28 @@ impl Solution {
                       <div>Memory: <strong style={{ color: '#A855F7' }}>14.2 MB</strong> (Beats 88.1%)</div>
                       <div>Worker: <strong style={{ color: '#10B981' }}>Judge0 Docker Sandbox</strong></div>
                     </div>
+
+                    {/* Spec #6 & #12: Post-Submission Visualization Navigation */}
+                    {activeProblem?.slug && (
+                      <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--line-subtle)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontSize: '12px', color: 'var(--ink-muted)' }}>
+                          Step-by-step algorithm trace &amp; data structure changes:
+                        </span>
+                        <Link
+                          href={`/problems/${activeProblem.slug}/visualize`}
+                          className="btn-primary"
+                          style={{
+                            padding: '6px 16px',
+                            fontSize: '12px',
+                            fontWeight: 700,
+                            textDecoration: 'none',
+                            background: 'linear-gradient(135deg, #6366F1 0%, #0EA5E9 100%)'
+                          }}
+                        >
+                          <Cpu size={13} /> View Visualization →
+                        </Link>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>

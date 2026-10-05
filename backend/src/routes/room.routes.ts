@@ -14,11 +14,11 @@ const router = Router();
  * GET /api/rooms/:sessionId
  * Public room view: metadata + leaderboard in a single read
  */
-router.get("/:sessionId", (req: Request, res: Response) => {
+router.get("/:sessionId", async (req: Request, res: Response) => {
   const sessionId = req.params.sessionId as string;
-  const room = sessionStore.getRoomPublicView(sessionId);
+  const session = await sessionStore.getSession(sessionId);
 
-  if (!room) {
+  if (!session) {
     res.status(404).json({
       success: false,
       error: `Room '${sessionId}' not found. Check the Room ID and try again.`
@@ -28,7 +28,7 @@ router.get("/:sessionId", (req: Request, res: Response) => {
 
   res.json({
     success: true,
-    data: room
+    data: session
   });
 });
 
@@ -36,9 +36,9 @@ router.get("/:sessionId", (req: Request, res: Response) => {
  * GET /api/rooms/:sessionId/leaderboard
  * Room-specific leaderboard only
  */
-router.get("/:sessionId/leaderboard", (req: Request, res: Response) => {
+router.get("/:sessionId/leaderboard", async (req: Request, res: Response) => {
   const sessionId = req.params.sessionId as string;
-  const session = sessionStore.getSession(sessionId);
+  const session = await sessionStore.getSession(sessionId);
 
   if (!session) {
     res.status(404).json({
@@ -48,7 +48,12 @@ router.get("/:sessionId/leaderboard", (req: Request, res: Response) => {
     return;
   }
 
-  const leaderboard = sessionStore.getLeaderboard(sessionId);
+  const leaderboard = session.submissions?.map(s => ({
+    username: s.username,
+    score: s.score,
+    runtimeMs: s.runtimeMs,
+    memoryKb: s.memoryKb
+  })) || [];
 
   res.json({
     success: true,
@@ -66,9 +71,9 @@ router.get("/:sessionId/leaderboard", (req: Request, res: Response) => {
  * GET /api/rooms/:sessionId/join
  * Validate if a room is joinable
  */
-router.get("/:sessionId/join", (req: Request, res: Response) => {
+router.get("/:sessionId/join", async (req: Request, res: Response) => {
   const sessionId = req.params.sessionId as string;
-  const session = sessionStore.getSession(sessionId);
+  const session = await sessionStore.getSession(sessionId);
 
   if (!session) {
     res.status(404).json({
