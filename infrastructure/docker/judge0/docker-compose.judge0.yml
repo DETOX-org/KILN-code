@@ -2,9 +2,12 @@ version: "3.8"
 
 services:
   judge0-server:
-    image: judge0/judge0:1.13.1
+    build:
+      context: .
+      dockerfile: Dockerfile.isolate-cgroupv2
     volumes:
       - ./judge0.conf:/judge0.conf:ro
+    env_file: ./judge0.conf
     ports:
       - "2358:2358"
     privileged: true
@@ -22,10 +25,13 @@ services:
       - judge0-redis
 
   judge0-workers:
-    image: judge0/judge0:1.13.1
+    build:
+      context: .
+      dockerfile: Dockerfile.isolate-cgroupv2
     command: ["./scripts/workers"]
     volumes:
       - ./judge0.conf:/judge0.conf:ro
+    env_file: ./judge0.conf
     privileged: true
     restart: always
     environment:

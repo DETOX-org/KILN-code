@@ -8,14 +8,14 @@
   "runtimes": {
     "c": {
       "language": "c",
-      "name": "C (GCC 10.2.0)",
-      "judge0LanguageId": 51,
-      "pinnedVersion": "10.2.0",
+      "name": "C (GCC 9.2.0)",
+      "judge0LanguageId": 50,
+      "pinnedVersion": "9.2.0",
       "compiler": "gcc",
       "compileCommand": "gcc -O3 -std=c11 main.c",
       "versionCheck": {
         "code": "#include <stdio.h>\nint main() { printf(\"GCC %s\\n\", __VERSION__); return 0; }",
-        "expectedVersionPattern": "10\\.2\\.0"
+        "expectedVersionPattern": "9\\.2\\.0"
       },
       "defaultLimits": {
         "cpuTimeLimitMs": 2000,
@@ -25,14 +25,14 @@
     },
     "cpp": {
       "language": "cpp",
-      "name": "C++ (GCC 10.2.0)",
-      "judge0LanguageId": 52,
-      "pinnedVersion": "10.2.0",
+      "name": "C++ (GCC 9.2.0)",
+      "judge0LanguageId": 54,
+      "pinnedVersion": "9.2.0",
       "compiler": "g++",
       "compileCommand": "g++ -O3 -std=c++17 main.cpp",
       "versionCheck": {
         "code": "#include <iostream>\nint main() { std::cout << \"GCC \" << __VERSION__ << std::endl; return 0; }",
-        "expectedVersionPattern": "10\\.2\\.0"
+        "expectedVersionPattern": "9\\.2\\.0"
       },
       "defaultLimits": {
         "cpuTimeLimitMs": 2000,
@@ -42,14 +42,14 @@
     },
     "java": {
       "language": "java",
-      "name": "Java (OpenJDK 15.0.2)",
-      "judge0LanguageId": 91,
-      "pinnedVersion": "15.0.2",
+      "name": "Java (OpenJDK 13.0.1)",
+      "judge0LanguageId": 62,
+      "pinnedVersion": "13.0.1",
       "compiler": "javac",
       "compileCommand": "javac Main.java",
       "versionCheck": {
         "code": "public class Main { public static void main(String[] args) { System.out.println(\"Java \" + System.getProperty(\"java.version\")); } }",
-        "expectedVersionPattern": "15\\.0\\.2"
+        "expectedVersionPattern": "13\\.0\\.1"
       },
       "defaultLimits": {
         "cpuTimeLimitMs": 3000,
@@ -59,14 +59,14 @@
     },
     "python": {
       "language": "python",
-      "name": "Python (3.10.0)",
-      "judge0LanguageId": 92,
-      "pinnedVersion": "3.10.0",
+      "name": "Python (3.8.1)",
+      "judge0LanguageId": 71,
+      "pinnedVersion": "3.8.1",
       "compiler": "python3",
       "compileCommand": null,
       "versionCheck": {
         "code": "import sys; print(f'Python {sys.version.split()[0]}')",
-        "expectedVersionPattern": "3\\.10\\.0"
+        "expectedVersionPattern": "3\\.8\\.1"
       },
       "defaultLimits": {
         "cpuTimeLimitMs": 3000,
@@ -76,14 +76,14 @@
     },
     "javascript": {
       "language": "javascript",
-      "name": "JavaScript (Node.js 18.15.0)",
-      "judge0LanguageId": 93,
-      "pinnedVersion": "18.15.0",
+      "name": "JavaScript (Node.js 12.14.0)",
+      "judge0LanguageId": 63,
+      "pinnedVersion": "12.14.0",
       "compiler": "node",
       "compileCommand": null,
       "versionCheck": {
         "code": "console.log('Node.js ' + process.version);",
-        "expectedVersionPattern": "18\\.15\\.0"
+        "expectedVersionPattern": "12\\.14\\.0"
       },
       "defaultLimits": {
         "cpuTimeLimitMs": 2000,
@@ -93,14 +93,14 @@
     },
     "typescript": {
       "language": "typescript",
-      "name": "TypeScript (5.0.3)",
-      "judge0LanguageId": 94,
-      "pinnedVersion": "5.0.3",
+      "name": "TypeScript (3.7.4)",
+      "judge0LanguageId": 74,
+      "pinnedVersion": "3.7.4",
       "compiler": "tsc",
       "compileCommand": "tsc --target ES2022",
       "versionCheck": {
-        "code": "declare const process: { version: string }; console.log('TypeScript 5.0.3 on Node ' + process.version);",
-        "expectedVersionPattern": "5\\.0\\.3"
+        "code": "declare const process: { version: string }; console.log('TypeScript 3.7.4 on Node ' + process.version);",
+        "expectedVersionPattern": "3\\.7\\.4"
       },
       "defaultLimits": {
         "cpuTimeLimitMs": 3000,
@@ -127,3 +127,6 @@
     }
   }
 }
+
+
+

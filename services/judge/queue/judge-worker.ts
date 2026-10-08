@@ -37,7 +37,8 @@ const SUPPORTED_LANGUAGES = new Set([
   "rust",
   "csharp",
   "kotlin",
-  "sql"
+  "sql",
+  "embedded_c"
 ]);
 
 // Piston is deliberately NOT part of engines/index.ts's LANGUAGE_ROUTING
@@ -144,9 +145,10 @@ async function runTestWithFailover(
   job: { language: string; code: string },
   test: { input: string; expectedOutput: string }
 ): Promise<{ result: EngineResult; failedOver: boolean }> {
-  const primaryEngine = createJudgeEngine(job.language);
+  
 
   try {
+    const primaryEngine = createJudgeEngine(job.language);
     const result = await runTestOnEngine(
       primaryEngine,
       job,

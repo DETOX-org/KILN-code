@@ -1,0 +1,100 @@
+FROM judge0/judge0:1.13.1
+
+USER root
+
+RUN chattr -i /var/lib/apt/lists 2>/dev/null; \
+    mkdir -p /var/lib/apt/lists/partial && \
+    chmod 755 /var/lib/apt/lists /var/lib/apt/lists/partial && \
+    sed -i \
+      -e 's|http://deb.debian.org/debian|http://archive.debian.org/debian|g' \
+      -e 's|http://security.debian.org/debian-security|http://archive.debian.org/debian-security|g' \
+      /etc/apt/sources.list && \
+    echo "Acquire::Check-Valid-Until \"false\";" > /etc/apt/apt.conf.d/99no-check-valid-until
+
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+      libcap-dev libseccomp-dev libsystemd-dev asciidoc && \
+    rm -rf /var/lib/apt/lists/*
+
+RUN printf '%s\n' \
+      '#ifndef COMPAT_CLONE3_H' \
+      '#define COMPAT_CLONE3_H' \
+      '#include <linux/types.h>' \
+      '#include <sys/syscall.h>' \
+      '#ifndef SYS_clone3' \
+      '#define SYS_clone3 435' \
+      '#endif' \
+      '#ifndef SYS_quotactl_fd' \
+      '#define SYS_quotactl_fd 443' \
+      '#endif' \
+      '#ifndef CLONE_INTO_CGROUP' \
+      '#define CLONE_INTO_CGROUP 0x200000000ULL' \
+      '#endif' \
+      '#ifndef __NR_io_uring_setup' \
+      '#define __NR_io_uring_setup 425' \
+      '#endif' \
+      'struct clone_args {' \
+      '  __u64 flags;' \
+      '  __u64 pidfd;' \
+      '  __u64 child_tid;' \
+      '  __u64 parent_tid;' \
+      '  __u64 exit_signal;' \
+      '  __u64 stack;' \
+      '  __u64 stack_size;' \
+      '  __u64 tls;' \
+      '  __u64 set_tid;' \
+      '  __u64 set_tid_size;' \
+      '  __u64 cgroup;' \
+      '};' \
+      '#endif' \
+      > /tmp/compat_clone3.h
+
+RUN git clone https://github.com/ioi/isolate.git /tmp/isolate && \
+    cd /tmp/isolate && \
+    git checkout v2.7 && \
+    make CFLAGS_EXTRA="-include /tmp/compat_clone3.h" -j"$(nproc)" isolate isolate-cg-keeper default.cf && \
+    install -m 4755 -o root -g root isolate /usr/local/bin/isolate-real && \
+    install -m 755 isolate-cg-keeper /usr/local/bin/isolate-cg-keeper && \
+    install -m 644 default.cf /usr/local/etc/isolate && \
+    rm -rf /tmp/isolate
+
+RUN printf '%s\n' \
+      '#!/bin/sh' \
+      'args=""' \
+      'for a in "$@"; do' \
+      '  case "$a" in' \
+      '    --cg-timing|--no-cg-timing) ;;' \
+      '    *) args="$args \"$a\"" ;;' \
+      '  esac' \
+      'done' \
+      'eval exec /usr/local/bin/isolate-real $args' \
+      > /usr/local/bin/isolate && \
+    chmod 755 /usr/local/bin/isolate
+
+RUN (useradd -r -M -s /usr/sbin/nologin isolate || true) && \
+    grep -q '^isolate:' /etc/subuid || echo "isolate:100000:65536" >> /etc/subuid && \
+    grep -q '^isolate:' /etc/subgid || echo "isolate:100000:65536" >> /etc/subgid && \
+    mkdir -p /run/isolate/locks && \
+    sed -i 's|^cg_root = auto:.*|cg_root = /sys/fs/cgroup|' /usr/local/etc/isolate
+
+RUN printf '%s\n' \
+      '#!/bin/sh' \
+      'mkdir -p /sys/fs/cgroup/init' \
+      'for p in $(cat /sys/fs/cgroup/cgroup.procs 2>/dev/null); do' \
+      '  echo $p > /sys/fs/cgroup/init/cgroup.procs 2>/dev/null || true' \
+      'done' \
+      'echo "+cpuset +cpu +memory +pids" > /sys/fs/cgroup/cgroup.subtree_control 2>/dev/null || true' \
+      > /usr/local/bin/cgroup-privileged-setup.sh && \
+    chmod +x /usr/local/bin/cgroup-privileged-setup.sh
+
+RUN printf '%s\n' \
+      '#!/bin/sh' \
+      'sudo /usr/local/bin/cgroup-privileged-setup.sh' \
+      'exec /api/docker-entrypoint.sh "$@"' \
+      > /usr/local/bin/cgroup-setup-entrypoint.sh && \
+    chmod +x /usr/local/bin/cgroup-setup-entrypoint.sh
+
+USER judge0
+
+ENTRYPOINT ["/usr/local/bin/cgroup-setup-entrypoint.sh"]
+CMD ["/api/scripts/server"]

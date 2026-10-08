@@ -29,7 +29,8 @@ type Language =
   | "rust"
   | "csharp"
   | "kotlin"
-  | "sql";
+  | "sql"
+  | "embedded_c";
 
 type TestCase = {
   input: string;
@@ -96,9 +97,9 @@ async function runTestWithFailover(
   request: { language: string; code: string },
   test: { input: string; expectedOutput: string }
 ): Promise<{ result: EngineResult; engineName: string }> {
-  const primaryEngine = createJudgeEngine(request.language);
-
   try {
+    const primaryEngine = createJudgeEngine(request.language);
+
     const result = await runTestOnEngine(
       primaryEngine,
       request,
@@ -189,7 +190,8 @@ const server = http.createServer((req, res) => {
         "rust",
         "csharp",
         "kotlin",
-        "sql"
+        "sql",
+        "embedded_c"
       ].includes(request.language)
     ) {
       sendJson(res, 400, {

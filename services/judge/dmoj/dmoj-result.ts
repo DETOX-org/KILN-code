@@ -17,6 +17,7 @@ export interface DmojSubtaskResult {
 
 export interface DmojMappedSubmissionState
   extends DmojSubmissionState {
+  language: string;
   checkerMessage?: string;
   subtaskResults?: DmojSubtaskResult[];
 }
@@ -141,7 +142,7 @@ export function mapDmojSubmissionResult(
     engineVersion:
       process.env.DMOJ_ENGINE_VERSION ??
       "5ef74c5d6cad9efb2e86a5bb8ff2c90aaa6e435c",
-    runtime: "dmoj",
+    runtime: state.language,
     runtimeVersion,
     workerId: process.env.DMOJ_JUDGE_NAME,
     sandboxConfigVersion:

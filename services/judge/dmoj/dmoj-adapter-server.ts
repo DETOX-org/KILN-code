@@ -1,13 +1,25 @@
 import http from "node:http";
+import { randomUUID } from "node:crypto";
 
 import { DmojBridge } from "./dmoj-bridge.js";
 import { mapDmojSubmissionResult } from "./dmoj-result.js";
+import { createDmojProblem, removeDmojProblem } from "./dmoj-problem-store.js";
 
 const PORT = Number(
   process.env.DMOJ_ADAPTER_PORT ?? 3002
 );
 
+const LANGUAGE_MAP: Record<string, string> = {
+  go: "GO",
+  rust: "RUST",
+  kotlin: "KOTLIN",
+  csharp: "MONOCS",
+  embedded_c: "C"
+};
+
 const bridge = new DmojBridge();
+
+const jobProblems = new Map<string, string>();
 
 function sendJson(
   res: http.ServerResponse,
@@ -49,24 +61,53 @@ async function handleRequest(
 
     try {
       const request = JSON.parse(body) as {
-        problemId: string;
         language: string;
-        source: string;
+        code: string;
+        input?: string;
+        expectedOutput?: string;
         timeLimit?: number;
         memoryLimit?: number;
         shortCircuit?: boolean;
         meta?: Record<string, unknown>;
       };
 
+      const dmojLanguage = LANGUAGE_MAP[request.language];
+
+      if (!dmojLanguage) {
+        throw new Error(
+          `DMOJ does not support language: ${request.language}`
+        );
+      }
+
+      const problemId = `adhoc-${randomUUID()}`;
+      const timeLimit = request.timeLimit ?? 2;
+      const memoryLimit = request.memoryLimit ?? 262144;
+      const shortCircuit = request.shortCircuit ?? true;
+
+      await createDmojProblem({
+        problemId,
+        timeLimit,
+        memoryLimit,
+        shortCircuit,
+        initYml:
+          "test_cases:\n- {in: input.txt, out: output.txt, points: 100}\n",
+        files: {
+          "input.txt": request.input ?? "",
+          "output.txt": request.expectedOutput ?? ""
+        }
+      });
+
       const jobId = await bridge.submit({
-        problemId: request.problemId,
-        language: request.language,
-        source: request.source,
-        timeLimit: request.timeLimit,
-        memoryLimit: request.memoryLimit,
-        shortCircuit: request.shortCircuit,
+        problemId,
+        language: dmojLanguage,
+        source: request.code,
+        timeLimit,
+        memoryLimit,
+        shortCircuit,
         meta: request.meta
       });
+
+      jobProblems.set(jobId, problemId);
 
       sendJson(res, 202, {
         jobId
@@ -93,6 +134,17 @@ async function handleRequest(
 
     try {
       const state = await bridge.poll(jobId);
+
+      if (state.finished) {
+        const problemId = jobProblems.get(jobId);
+
+        if (problemId) {
+          jobProblems.delete(jobId);
+          void removeDmojProblem(problemId).catch(() => {
+            // Best-effort cleanup.
+          });
+        }
+      }
 
       sendJson(res, 200, {
         finished: state.finished,

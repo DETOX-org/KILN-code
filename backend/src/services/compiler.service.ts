@@ -103,9 +103,9 @@ export class CompilerService {
 
       // Map EngineResult to our expected output format
       const isAccepted = caseExec.status === "Accepted";
-      const runtimeMs = 0; // The EngineResult doesn't include runtime currently, but we can fake it or extract it if needed
-      const memoryKb = 0;
-      
+      const runtimeMs = caseExec.timeMS ?? 0; // The EngineResult doesn't include runtime currently, but we can fake it or extract it if needed
+      const memoryKb = caseExec.memoryKb ?? 0;
+
       maxRuntime = Math.max(maxRuntime, runtimeMs);
       maxMemory = Math.max(maxMemory, memoryKb);
 

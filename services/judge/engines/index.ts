@@ -25,14 +25,16 @@ const LANGUAGE_ROUTING: Record<string, EngineName> = {
   go: "dmoj",
   rust: "dmoj",
   csharp: "dmoj",
-  kotlin: "dmoj"
+  kotlin: "dmoj",
+  embedded_c: "dmoj"
 };
 
 export const DMOJ_LANGUAGES = new Set([
   "go",
   "rust",
   "csharp",
-  "kotlin"
+  "kotlin",
+  "embedded_c"
 ]);
 
 export const JUDGE0_LANGUAGES = new Set([

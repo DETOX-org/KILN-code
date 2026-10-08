@@ -63,6 +63,7 @@ export class DmojBridge {
 
   private socket: Socket | null = null;
   private handshakeComplete = false;
+  private pingInterval: NodeJS.Timeout | null = null;
   private judgeId: string | null = null;
   private executors: Record<string, unknown> = {};
   private supportedProblems = new Set<string>();
@@ -161,6 +162,7 @@ export class DmojBridge {
       jobId,
       submissionId,
       problemId: submission.problemId,
+      language: submission.language,
       status: "pending",
       compileMessage: "",
       compileError: "",
@@ -359,6 +361,10 @@ export class DmojBridge {
       case "submission-acknowledged":
         return;
 
+      case "ping":
+        await sendDmojPacket(this.socket!, { name: "pong" });
+        return;
+
       case "compile-message":
         state.status = "compiling";
         state.compileMessage =
@@ -460,6 +466,14 @@ export class DmojBridge {
     console.log(
       `DMOJ judge connected: ${this.judgeId} (${Object.keys(this.executors).length} executors, ${this.supportedProblems.size} problems)`
     );
+    this.pingInterval = setInterval(() => {
+      if (this.socket) {
+        void sendDmojPacket(this.socket, {
+          name: "ping",
+          when: Date.now() / 1000
+        });
+      }
+    }, 30000);
   }
 
   private parseCases(
@@ -492,6 +506,10 @@ export class DmojBridge {
     );
 
     if (!waiter) {
+      if (this.pingInterval) {
+       clearInterval(this.pingInterval);
+       this.pingInterval = null;
+      }
       return;
     }
 
@@ -530,3 +548,5 @@ export class DmojBridge {
     this.waiters.clear();
   }
 }
+
+

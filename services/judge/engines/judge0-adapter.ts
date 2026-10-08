@@ -512,7 +512,7 @@ export class Judge0Adapter implements JudgeEngine {
     context?: StoredJobContext
   ): EngineResult {
     const rawStdout = raw.stdout ?? "";
-    const rawStderr = raw.stderr ?? raw.compile_output ?? raw.message ?? "";
+    const rawStderr = raw.stderr || raw.compile_output || raw.message || "";
     const rawMessage = raw.message ?? "";
     const rawCompile = raw.compile_output ?? "";
 
@@ -602,3 +602,4 @@ export class Judge0Adapter implements JudgeEngine {
     };
   }
 }
+

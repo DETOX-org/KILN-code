@@ -109,7 +109,7 @@ const PISTON_RUNTIMES: Record<
 > = {
   python: {
     language: "python",
-    version: "3.12.0",
+    version: "3.10.0",
     compileMemoryLimit:
       DEFAULT_MEMORY_LIMIT,
     runMemoryLimit:
@@ -135,6 +135,15 @@ const PISTON_RUNTIMES: Record<
   },
 
   c: {
+    language: "c",
+    version: "10.2.0",
+    compileMemoryLimit:
+      DEFAULT_MEMORY_LIMIT,
+    runMemoryLimit:
+      DEFAULT_MEMORY_LIMIT,
+  },
+
+  embedded_c: {
     language: "c",
     version: "10.2.0",
     compileMemoryLimit:
@@ -818,3 +827,4 @@ export class PistonEngine
     };
   }
 }
+
