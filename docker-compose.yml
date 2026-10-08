@@ -24,13 +24,39 @@
 
     expose:
       - "3001"
+      - "3002"
+      - "9999"
 
     environment:
       REDIS_URL: redis://redis:6379
+      JUDGE0_URL: http://host.docker.internal:2358
+      DMOJ_PROBLEM_ROOT: /dmoj-problems
+
+    volumes:
+      - dmoj_problems:/dmoj-problems
 
     depends_on:
       redis:
-        condition: service_started
+        condition: service_healthy
+
+  dmoj:
+    build:
+      context: .
+      dockerfile: infrastructure/docker/judge/dmoj/Dockerfile
+
+    command: ["run", "judge", "-p", "9999", "-c", "/config/judge.yml"]
+
+    environment:
+      DMOJ_JUDGE_NAME: kiln-dmoj-judge
+      DMOJ_JUDGE_KEY: kiln-dmoj-key
+
+    volumes:
+      - ./infrastructure/docker/judge/dmoj/config:/config:ro
+      - ./infrastructure/docker/judge/dmoj/problems:/problems:ro
+      - dmoj_problems:/dmoj-problems
+
+    depends_on:
+      - judge
 
   piston:
     image: ghcr.io/engineer-man/piston@sha256:2f66b7456189c4d713aa986d98eccd0b6ee16d26c7ec5f21b30e942756fd127a
@@ -91,3 +117,4 @@ volumes:
   piston_data:
   postgres_data:
   redis_data:
+  dmoj_problems:

@@ -1,0 +1,3 @@
+problem_storage_globs:
+  - /problems/**/
+  - /dmoj-problems/**/

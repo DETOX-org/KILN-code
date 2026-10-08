@@ -23,9 +23,11 @@ const PISTON_SANDBOX_CONFIG_VERSION = process.env.PISTON_SANDBOX_CONFIG_VERSION 
 const PISTON_RUNTIMES = {
     python: {
         language: "python",
-        version: "3.12.0",
-        compileMemoryLimit: DEFAULT_MEMORY_LIMIT,
-        runMemoryLimit: DEFAULT_MEMORY_LIMIT,
+        version: "3.10.0",
+        compileMemoryLimit:
+            DEFAULT_MEMORY_LIMIT,
+        runMemoryLimit:
+            DEFAULT_MEMORY_LIMIT,
     },
     javascript: {
         language: "javascript",

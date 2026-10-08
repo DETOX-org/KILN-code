@@ -1,7 +1,8 @@
 import { and, count, desc, eq } from "drizzle-orm";
 import { db } from "../db/index.js";
-import { challenges, submissions } from "../db/schema.js";
+import { challenges, submissions, testCases } from "../db/schema.js";
 import { findSubmissionById } from "../repositories/submission.repository.js";
+import { normalizeOutput } from "./compiler.service.js";
 import {
   Submission,
   StaffResolutionAction
@@ -107,6 +108,68 @@ async function resolveChallenge(
 
 // Import removed to avoid TS rootDir compilation error. Will use dynamic require.
 
+/**
+ * Re-runs a submission's stored source code against the problem's real
+ * test cases on Piston — the designated verification/failover engine.
+ * This is the actual second execution that `finalizeContest()` compares
+ * against the primary verdict. It is never used for primary grading,
+ * only for dual-run verification of top-of-leaderboard submissions.
+ */
+async function runPistonVerification(
+  language: string,
+  sourceCode: string,
+  tests: { input: string; expectedOutput: string }[],
+): Promise<{
+  status: DbSubmissionStatus;
+  runtimeMs: number;
+  memoryKb: number;
+}> {
+  const { PistonEngine } = require("../../../services/judge/engines/piston-engine.js");
+  const piston = new PistonEngine();
+
+  let maxRuntime = 0;
+  let maxMemory = 0;
+
+  for (const test of tests) {
+    const engineJobId = await piston.submit({
+      language,
+      code: sourceCode,
+      input: test.input,
+      expectedOutput: test.expectedOutput
+    });
+
+    const result = await piston.pollStatus(engineJobId);
+
+    maxRuntime = Math.max(maxRuntime, result.timeMs ?? 0);
+    maxMemory = Math.max(maxMemory, result.memoryKb ?? 0);
+
+    if (result.status !== "Accepted") {
+      return {
+        status: mapDomainStatusToDb(result.status),
+        runtimeMs: maxRuntime,
+        memoryKb: maxMemory
+      };
+    }
+
+    const actualOutput = normalizeOutput(result.stdout);
+    const expectedOutput = normalizeOutput(test.expectedOutput);
+
+    if (actualOutput !== expectedOutput) {
+      return {
+        status: "wrong_answer",
+        runtimeMs: maxRuntime,
+        memoryKb: maxMemory
+      };
+    }
+  }
+
+  return {
+    status: "accepted",
+    runtimeMs: maxRuntime,
+    memoryKb: maxMemory
+  };
+}
+
 export class JudgeRouterService {
   public async executeSubmission(
     jobId: string,
@@ -129,10 +192,10 @@ export class JudgeRouterService {
       });
 
       const result = await engine.pollStatus(engineJobId);
-      
-      const runtimeMs = 0; // extracted from result if available
-      const memoryKb = 0;
-      
+
+      const runtimeMs = result.timeMs ?? 0;
+      const memoryKb = result.memoryKb ?? 0;
+
       maxRuntime = Math.max(maxRuntime, runtimeMs);
       maxMemory = Math.max(maxMemory, memoryKb);
 
@@ -178,15 +241,16 @@ export class JudgeRouterService {
       memoryKb: maxMemory
     };
   }
+
   /**
    * Narrow Contest Finalization Dual-Run Trigger:
    * Only triggered at contest completion for qualifying
    * top-of-leaderboard submissions.
    *
-   * Active persistence is PostgreSQL-backed. Verification
-   * is recorded as Piston in the submissions table; the
-   * actual secondary execution comparison can be connected
-   * to the judge worker later.
+   * Active persistence is PostgreSQL-backed. Verification now runs a
+   * real second execution on Piston against the problem's actual test
+   * cases — `primaryVerdict` and `verificationVerdict` are genuinely
+   * independent values, so a discrepancy can actually be detected.
    */
   public async finalizeContest(
     contestId: string,
@@ -244,11 +308,47 @@ export class JudgeRouterService {
 
       audited++;
 
-      const primaryVerdict =
-        sub.status;
+      const primaryVerdict: DbSubmissionStatus =
+        sub.status as DbSubmissionStatus;
 
-      const verificationVerdict =
-        sub.status;
+      let verificationVerdict: DbSubmissionStatus;
+      let verificationRuntimeMs = sub.executionTimeMs ?? 0;
+      let verificationMemoryKb = sub.memoryUsedKb ?? 0;
+      let verificationFailed = false;
+
+      try {
+        const problemTestCases = await db
+          .select({
+            input: testCases.input,
+            expectedOutput: testCases.expectedOutput
+          })
+          .from(testCases)
+          .where(eq(testCases.problemId, sub.problemId));
+
+        const verification = await runPistonVerification(
+          sub.language,
+          sub.sourceCode,
+          problemTestCases
+        );
+
+        verificationVerdict = verification.status;
+        verificationRuntimeMs = verification.runtimeMs;
+        verificationMemoryKb = verification.memoryKb;
+      } catch (error) {
+        // Piston itself failed to run the verification — this is an
+        // infrastructure failure, not a graded verdict. Flag it for
+        // staff review rather than silently treating it as verified.
+        console.error(
+          `Piston verification failed for submission ${sub.id}:`,
+          error instanceof Error ? error.message : String(error)
+        );
+
+        verificationVerdict = "system_error";
+        verificationFailed = true;
+      }
+
+      const discrepancyFlag =
+        primaryVerdict !== verificationVerdict;
 
       await db
         .update(submissions)
@@ -256,16 +356,15 @@ export class JudgeRouterService {
           verificationEngine:
             "piston",
 
-          discrepancyFlag:
-            primaryVerdict !==
-            verificationVerdict,
+          discrepancyFlag,
 
           discrepancyDetails:
-            primaryVerdict !==
-              verificationVerdict
+            discrepancyFlag
               ? {
                 summary:
-                  "Primary and verification verdicts differ.",
+                  verificationFailed
+                    ? "Verification engine (Piston) failed to execute — flagged for manual review."
+                    : "Primary and verification verdicts differ.",
 
                 mismatch_test_case: 0,
 
@@ -282,10 +381,7 @@ export class JudgeRouterService {
                     0,
 
                   status:
-                    primaryVerdict ===
-                      "accepted"
-                      ? "accepted"
-                      : "judge_error",
+                    primaryVerdict,
 
                   score:
                     sub.score,
@@ -303,18 +399,13 @@ export class JudgeRouterService {
                     "piston",
 
                   runtime_ms:
-                    sub.executionTimeMs ??
-                    0,
+                    verificationRuntimeMs,
 
                   memory_kb:
-                    sub.memoryUsedKb ??
-                    0,
+                    verificationMemoryKb,
 
                   status:
-                    verificationVerdict ===
-                      "accepted"
-                      ? "accepted"
-                      : "judge_error",
+                    verificationVerdict,
 
                   score:
                     sub.score,
@@ -330,10 +421,9 @@ export class JudgeRouterService {
               : null,
 
           verifiedAt:
-            primaryVerdict ===
-              verificationVerdict
-              ? new Date()
-              : null,
+            discrepancyFlag
+              ? null
+              : new Date(),
         })
         .where(
           eq(
