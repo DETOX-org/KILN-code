@@ -1,3 +1,15 @@
+FROM node:18-bookworm AS builder
+
+WORKDIR /repo
+
+COPY services/judge/package*.json ./services/judge/
+RUN cd services/judge && npm ci
+
+COPY shared ./shared
+COPY services/judge ./services/judge
+
+RUN cd services/judge && npx tsc
+
 FROM node:18-bookworm
 
 WORKDIR /judge
@@ -6,8 +18,8 @@ COPY services/judge/package*.json ./
 
 RUN npm ci
 
-COPY services/judge/dist/services/judge ./dist
-COPY services/judge/dist/shared /shared
+COPY --from=builder /repo/services/judge/dist/services/judge ./dist
+COPY --from=builder /repo/services/judge/dist/shared /shared
 COPY services/judge/runtimes ./dist/runtimes
 
 EXPOSE 3001
