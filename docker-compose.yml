@@ -10,11 +10,17 @@
     environment:
       REDIS_URL: redis://redis:6379
       DATABASE_URL: postgresql://kiln:kiln_dev_password@db:5432/kiln
+      # The backend never imports judge engine code directly — it talks
+      # to the `judge` service below over HTTP. Service name resolves on
+      # the compose network; override for a split deployment (e.g. a VPS).
+      JUDGE_SERVICE_URL: http://judge:3001
 
     depends_on:
       db:
         condition: service_healthy
       redis:
+        condition: service_started
+      judge:
         condition: service_started
 
   judge:
@@ -22,6 +28,8 @@
       context: .
       dockerfile: infrastructure/docker/judge/Dockerfile
 
+    # 3001 is the judge HTTP API the `api` service calls (service-to-service
+    # over the compose network — no need to publish it to the host/internet).
     expose:
       - "3001"
       - "3002"
@@ -31,6 +39,12 @@
       REDIS_URL: redis://redis:6379
       JUDGE0_URL: http://host.docker.internal:2358
       DMOJ_PROBLEM_ROOT: /dmoj-problems
+
+    # On Linux (including any VPS), unlike Docker Desktop on Mac/Windows,
+    # host.docker.internal is not resolvable by default — this makes it
+    # point at the host gateway so JUDGE0_URL above actually works.
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
     volumes:
       - dmoj_problems:/dmoj-problems

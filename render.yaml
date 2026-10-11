@@ -15,3 +15,9 @@ services:
         sync: false
       - key: FIREBASE_API_KEY
         sync: false
+      # Judge0/DMOJ/Piston need privileged Docker containers, which Render's
+      # web service plans don't allow, so they run on a separate VPS instead
+      # (see docker-compose.yml + infrastructure/docker/judge0). Point this
+      # at that VPS's judge service, e.g. http://<vps-ip-or-domain>:3001.
+      - key: JUDGE_SERVICE_URL
+        sync: false

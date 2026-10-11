@@ -129,7 +129,189 @@ async function runTestWithFailover(
   return { result: fallbackResult, engineName: pistonFailover.name };
 }
 
+type BatchTestCase = {
+  input: string;
+  expectedOutput: string;
+  visibility?: TestVisibility;
+};
+
+type BatchRequest = {
+  language: Language;
+  code: string;
+  tests: BatchTestCase[];
+  // "auto" (default) uses the normal primary-engine-with-Piston-failover
+  // routing. "piston" forces every test straight onto Piston, bypassing
+  // the primary engines entirely — used for independent dual-run
+  // verification, where the whole point is a genuinely different engine
+  // than whatever produced the primary verdict.
+  engine?: "auto" | "piston";
+};
+
+type BatchResultEntry = {
+  testCase: number;
+  status: string;
+  exitCode: number | null;
+  stdout: string;
+  stderr: string;
+  timeMs?: number;
+  memoryKb?: number;
+  executedBy: EngineResult["executedBy"];
+  verificationMode: EngineResult["verificationMode"];
+  visibility: TestVisibility;
+};
+
+/**
+ * Runs every test case to completion (unlike the single-shot /execute
+ * handler above, this never stops at the first failure) and returns a
+ * result per test. This is what the backend calls so it can compute
+ * partial credit across a whole test suite in one round trip, instead
+ * of the backend process importing judge engine code directly.
+ */
+async function handleExecuteBatch(
+  req: http.IncomingMessage,
+  res: http.ServerResponse
+): Promise<void> {
+  let body = "";
+  let bodySize = 0;
+  let requestTooLarge = false;
+
+  req.on("data", (chunk: Buffer) => {
+    bodySize += chunk.length;
+
+    if (bodySize > MAX_REQUEST_SIZE) {
+      requestTooLarge = true;
+      req.destroy();
+      return;
+    }
+
+    body += chunk.toString();
+  });
+
+  req.on("end", async () => {
+    if (requestTooLarge) {
+      sendJson(res, 413, {
+        error: "Request payload exceeds the maximum allowed size"
+      });
+
+      return;
+    }
+
+    let request: BatchRequest;
+
+    try {
+      request = JSON.parse(body);
+    } catch {
+      sendJson(res, 400, { error: "Invalid JSON" });
+      return;
+    }
+
+    if (typeof request.code !== "string") {
+      sendJson(res, 400, { error: "Code must be a string" });
+      return;
+    }
+
+    if (byteLength(request.code) > MAX_CODE_SIZE) {
+      sendJson(res, 413, {
+        error: "Code exceeds the maximum allowed size"
+      });
+
+      return;
+    }
+
+    if (!Array.isArray(request.tests) || request.tests.length === 0) {
+      sendJson(res, 400, {
+        error: "At least one test case is required"
+      });
+
+      return;
+    }
+
+    if (request.tests.length > MAX_TEST_CASES) {
+      sendJson(res, 400, {
+        error: `Maximum of ${MAX_TEST_CASES} test cases allowed`
+      });
+
+      return;
+    }
+
+    if (!primariesHealthy && !pistonHealthy) {
+      sendJson(res, 503, {
+        error: "Judge engine is not initialized"
+      });
+
+      return;
+    }
+
+    if (request.engine === "piston" && !pistonHealthy) {
+      sendJson(res, 503, {
+        error: "Piston engine is not healthy"
+      });
+
+      return;
+    }
+
+    const results: BatchResultEntry[] = [];
+
+    for (let i = 0; i < request.tests.length; i++) {
+      const test = request.tests[i];
+      const visibility = test.visibility ?? "public";
+
+      try {
+        const { result } =
+          request.engine === "piston"
+            ? {
+                result: await runTestOnEngine(
+                  pistonFailover,
+                  request,
+                  test
+                )
+              }
+            : await runTestWithFailover(request, test);
+
+        results.push({
+          testCase: i + 1,
+          status: result.status,
+          exitCode: result.exitCode,
+          stdout: result.stdout,
+          stderr: result.stderr,
+          timeMs: result.timeMs,
+          memoryKb: result.memoryKb,
+          executedBy: result.executedBy,
+          verificationMode: result.verificationMode,
+          visibility
+        });
+      } catch (error) {
+        results.push({
+          testCase: i + 1,
+          status: "Judge Error",
+          exitCode: null,
+          stdout: "",
+          stderr:
+            error instanceof Error
+              ? error.message
+              : String(error),
+          executedBy: {
+            engineId: "unknown",
+            engineVersion: "unknown",
+            runtime: request.language,
+            runtimeVersion: "unknown"
+          },
+          verificationMode: "NONE",
+          visibility
+        });
+      }
+    }
+
+    sendJson(res, 200, { results });
+  });
+}
+
 const server = http.createServer((req, res) => {
+  if (req.method === "POST" && req.url === "/execute-batch") {
+    handleExecuteBatch(req, res);
+    return;
+  }
+
   if (req.method !== "POST" || req.url !== "/execute") {
     sendJson(res, 404, {
       error: "Not Found"
