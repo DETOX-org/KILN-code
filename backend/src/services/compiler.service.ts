@@ -1,4 +1,5 @@
-// Import removed to avoid TS rootDir compilation error. Will use dynamic require.
+import { executeBatch } from "./judge-client.service.js";
+
 export type SupportedLanguage = "python" | "javascript" | "typescript" | "cpp" | "c";
 
 export interface TestCaseInput {
@@ -77,8 +78,15 @@ export class CompilerService {
     const logs: string[] = [];
     logs.push(`[JUDGE] Routing execution to engine for language: ${lang}`);
 
-    const { createJudgeEngine } = require("../../../services/judge/engines/index.js");
-    const engine = createJudgeEngine(lang);
+    const batch = await executeBatch({
+      language: lang,
+      code: params.sourceCode,
+      tests: params.testCases.map((tc) => ({
+        input: tc.input,
+        expectedOutput: tc.expectedOutput
+      })),
+      engine: "auto"
+    });
 
     const testResults: TestCaseResult[] = [];
     let passedCount = 0;
@@ -93,17 +101,10 @@ export class CompilerService {
       const points = tc.points || Math.floor(100 / params.testCases.length);
       maxTotalScore += points;
 
-      const engineJobId = await engine.submit({
-        language: lang,
-        code: params.sourceCode,
-        input: tc.input
-      });
+      const caseExec = batch.results[i];
 
-      const caseExec = await engine.pollStatus(engineJobId);
-
-      // Map EngineResult to our expected output format
-      const isAccepted = caseExec.status === "Accepted";
-      const runtimeMs = caseExec.timeMS ?? 0; // The EngineResult doesn't include runtime currently, but we can fake it or extract it if needed
+      // Map judge service result to our expected output format
+      const runtimeMs = caseExec.timeMs ?? 0;
       const memoryKb = caseExec.memoryKb ?? 0;
 
       maxRuntime = Math.max(maxRuntime, runtimeMs);

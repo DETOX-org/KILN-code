@@ -3,6 +3,7 @@ import { db } from "../db/index.js";
 import { challenges, submissions, testCases } from "../db/schema.js";
 import { findSubmissionById } from "../repositories/submission.repository.js";
 import { normalizeOutput } from "./compiler.service.js";
+import { executeBatch } from "./judge-client.service.js";
 import {
   Submission,
   StaffResolutionAction
@@ -106,8 +107,6 @@ async function resolveChallenge(
   return rows[0];
 }
 
-// Import removed to avoid TS rootDir compilation error. Will use dynamic require.
-
 /**
  * Re-runs a submission's stored source code against the problem's real
  * test cases on Piston — the designated verification/failover engine.
@@ -124,21 +123,22 @@ async function runPistonVerification(
   runtimeMs: number;
   memoryKb: number;
 }> {
-  const { PistonEngine } = require("../../../services/judge/engines/piston-engine.js");
-  const piston = new PistonEngine();
+  const batch = await executeBatch({
+    language,
+    code: sourceCode,
+    tests: tests.map((t) => ({
+      input: t.input,
+      expectedOutput: t.expectedOutput
+    })),
+    engine: "piston"
+  });
 
   let maxRuntime = 0;
   let maxMemory = 0;
 
-  for (const test of tests) {
-    const engineJobId = await piston.submit({
-      language,
-      code: sourceCode,
-      input: test.input,
-      expectedOutput: test.expectedOutput
-    });
-
-    const result = await piston.pollStatus(engineJobId);
+  for (let i = 0; i < tests.length; i++) {
+    const test = tests[i];
+    const result = batch.results[i];
 
     maxRuntime = Math.max(maxRuntime, result.timeMs ?? 0);
     maxMemory = Math.max(maxMemory, result.memoryKb ?? 0);
@@ -177,21 +177,25 @@ export class JudgeRouterService {
     sourceCode: string,
     testCases: { input: string; expectedOutput: string; visibility?: "public" | "hidden" }[]
   ): Promise<{ status: string; results: any[]; score: number; runtimeMs: number; memoryKb: number }> {
-    const { createJudgeEngine } = require("../../../services/judge/engines/index.js");
-    const engine = createJudgeEngine(language);
+    const batch = await executeBatch({
+      language,
+      code: sourceCode,
+      tests: testCases.map((t) => ({
+        input: t.input,
+        expectedOutput: t.expectedOutput,
+        visibility: t.visibility
+      })),
+      engine: "auto"
+    });
+
     const results = [];
     let passedCount = 0;
     let maxRuntime = 0;
     let maxMemory = 0;
 
-    for (const test of testCases) {
-      const engineJobId = await engine.submit({
-        language,
-        code: sourceCode,
-        input: test.input
-      });
-
-      const result = await engine.pollStatus(engineJobId);
+    for (let i = 0; i < testCases.length; i++) {
+      const test = testCases[i];
+      const result = batch.results[i];
 
       const runtimeMs = result.timeMs ?? 0;
       const memoryKb = result.memoryKb ?? 0;
