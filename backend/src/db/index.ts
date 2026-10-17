@@ -9,8 +9,22 @@ if (!databaseUrl) {
     throw new Error("DATABASE_URL is not set");
 }
 
+const isLocalhost =
+    databaseUrl.includes("localhost") ||
+    databaseUrl.includes("127.0.0.1") ||
+    databaseUrl.includes("@db:");
+
+const useSsl =
+    !isLocalhost &&
+    (databaseUrl.includes("sslmode=") ||
+     databaseUrl.includes(".render.com") ||
+     databaseUrl.includes(".neon.tech") ||
+     databaseUrl.includes(".supabase.co") ||
+     process.env.NODE_ENV === "production");
+
 export const pool = new Pool({
     connectionString: databaseUrl,
+    ssl: useSsl ? { rejectUnauthorized: false } : undefined,
     max: 20,
     idleTimeoutMillis: 30_000,
     connectionTimeoutMillis: 5_000,
